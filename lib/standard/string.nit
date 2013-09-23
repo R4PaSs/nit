@@ -299,6 +299,48 @@ abstract class AbstractString
 	end
 end
 
+abstract class StringCharView
+	super SequenceRead[Char]
+
+	type SELFTYPE: AbstractString
+
+	private var target: SELFTYPE
+
+	private init(tgt: SELFTYPE)
+	do
+		target = tgt
+	end
+
+	redef fun is_empty do return target.is_empty
+
+	redef fun length do return target.length
+
+	redef fun iterator: IndexedIterator[Char] do return self.iterator_from(0)
+
+	fun iterator_from(pos: Int): IndexedIterator[Char] is abstract
+
+	fun reverse_iterator: IndexedIterator[Char] do return self.reverse_iterator_from(self.length - 1)
+
+	fun reverse_iterator_from(pos: Int): IndexedIterator[Char] is abstract
+
+	redef fun has(c: Char): Bool
+	do
+		for i in self do
+			if i == c then return true
+		end
+		return false
+	end
+
+end
+
+abstract class BufferCharView
+	super StringCharView
+	super Sequence[Char]
+
+	redef type SELFTYPE: Buffer
+
+end
+
 # Immutable strings of characters.
 class String
 	super Comparable
@@ -313,9 +355,13 @@ class String
 	# Indes in _items of the last item of the string
 	readable var _index_to: Int
 
+	private var char_view: StringCharView
+
 	################################################
 	#       AbstractString specific methods        #
 	################################################
+
+	fun chars: StringCharView do return char_view
 
 	redef fun [](index) do
 		assert index >= 0
@@ -461,6 +507,7 @@ class String
 		_index_from = from
 		_index_to = to
 		_length = to - from + 1
+		char_view = new FlatStringCharView(self)
 	end
 
 	private init with_infos(items: NativeString, len: Int, from: Int, to: Int)
@@ -469,6 +516,7 @@ class String
 		_length = len
 		_index_from = from
 		_index_to = to
+		char_view = new FlatStringCharView(self)
 	end
 
 	# Return a null terminated char *
@@ -618,6 +666,77 @@ class String
 	end
 end
 
+private class FlatStringReverseIterator
+	super IndexedIterator[Char]
+
+	var target: String
+
+	var target_items: NativeString
+
+	var curr_pos: Int
+
+	init with_pos(tgt: String, pos: Int)
+	do
+		target = tgt
+		target_items = tgt.items
+		curr_pos = pos + tgt.index_from
+	end
+
+	redef fun is_ok do return curr_pos >= 0
+
+	redef fun item do return target_items[curr_pos]
+
+	redef fun next do curr_pos -= 1
+
+	redef fun index do return curr_pos - target.index_from
+
+end
+
+private class FlatStringIterator
+	super IndexedIterator[Char]
+
+	var target: String
+
+	var target_items: NativeString
+
+	var curr_pos: Int
+
+	init with_pos(tgt: String, pos: Int)
+	do
+		target = tgt
+		target_items = tgt.items
+		curr_pos = pos + target.index_from
+	end
+
+	redef fun is_ok do return curr_pos <= target.index_to
+
+	redef fun item do return target_items[curr_pos]
+
+	redef fun next do curr_pos += 1
+
+	redef fun index do return curr_pos - target.index_from
+
+end
+
+private class FlatStringCharView
+	super StringCharView
+
+	redef type SELFTYPE: String
+
+	redef fun [](index)
+	do
+		# Check that the index (+ index_from) is not larger than indexTo
+		# In other terms, if the index is valid
+		assert index >= 0
+		assert (index + target._index_from) <= target._index_to
+		return target._items[index + target._index_from]
+	end
+
+	redef fun iterator_from(pos) do return new FlatStringIterator.with_pos(target, pos)
+
+	redef fun reverse_iterator_from(pos) do return new FlatStringReverseIterator.with_pos(target, pos)
+end
+
 # Mutable strings of characters.
 class Buffer
 	super AbstractString
@@ -626,6 +745,8 @@ class Buffer
 	super AbstractArray[Char]
 
 	redef type OTHER: String
+
+	private var char_view: BufferCharView
 
 	redef fun []=(index, item)
 	do
@@ -636,6 +757,8 @@ class Buffer
 		assert index >= 0 and index < length
 		_items[index] = item
 	end
+
+	fun chars: BufferCharView do return char_view
 
 	redef fun add(c)
 	do
@@ -713,6 +836,7 @@ class Buffer
 		_length = s.length
 		_items = calloc_string(_capacity)
 		s.items.copy_to(_items, _length, s._index_from, 0)
+		char_view = new FlatBufferCharView(self)
 	end
 
 	# Create a new empty string with a given capacity.
@@ -723,6 +847,7 @@ class Buffer
 		_items = calloc_string(cap+1)
 		_capacity = cap
 		_length = 0
+		char_view = new FlatBufferCharView(self)
 	end
 
 	redef fun ==(o)
@@ -741,6 +866,104 @@ class Buffer
 	end
 
 	readable private var _capacity: Int
+end
+
+private class FlatBufferReverseIterator
+	super IndexedIterator[Char]
+
+	var target: Buffer
+
+	var target_items: NativeString
+
+	var curr_pos: Int
+
+	init with_pos(tgt: Buffer, pos: Int)
+	do
+		target = tgt
+		target_items = tgt.items
+		curr_pos = pos
+	end
+
+	redef fun index do return curr_pos
+
+	redef fun is_ok do return curr_pos >= 0
+
+	redef fun item do return target_items[curr_pos]
+
+	redef fun next do curr_pos -= 1
+
+end
+
+private class FlatBufferCharView
+	super BufferCharView
+	super StringCapable
+
+	redef type SELFTYPE: Buffer
+
+	init(tgt: Buffer)
+	do
+		self.target = tgt
+	end
+
+	redef fun [](index) do return target._items[index]
+
+	redef fun []=(index, item)
+	do
+		assert index >= 0 and index <= length
+		if index == length then
+			add(item)
+			return
+		end
+		target._items[index] = item
+	end
+
+	redef fun add(c)
+	do
+		target.add(c)
+	end
+
+	fun enlarge(cap: Int)
+	do
+		target.enlarge(cap)
+	end
+
+	redef fun append(s)
+	do
+		var my_items = target.items
+		var s_length = s.length
+		if target.capacity < s.length then enlarge(s_length + target.length)
+	end
+
+	redef fun iterator_from(pos) do return new FlatBufferIterator.with_pos(target, pos)
+
+	redef fun reverse_iterator_from(pos) do return new FlatBufferReverseIterator.with_pos(target, pos)
+
+end
+
+private class FlatBufferIterator
+	super IndexedIterator[Char]
+
+	var target: Buffer
+
+	var target_items: NativeString
+
+	var curr_pos: Int
+
+	init with_pos(tgt: Buffer, pos: Int)
+	do
+		target = tgt
+		target_items = tgt.items
+		curr_pos = pos
+	end
+
+	redef fun index do return curr_pos
+
+	redef fun is_ok do return curr_pos < target.length
+
+	redef fun item do return target_items[curr_pos]
+
+	redef fun next do curr_pos += 1
+
 end
 
 ###############################################################################
