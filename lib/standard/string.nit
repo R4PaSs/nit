@@ -27,14 +27,60 @@ import hash
 
 # Common subclass for String and Buffer
 abstract class AbstractString
-	super AbstractArrayRead[Char]
 
 	readable private var _items: NativeString
 
-	# Access a character at `index` in the string.
+	fun length: Int is abstract
+
+	fun chars: StringCharView is abstract
+
+	init do end
+
+	fun is_empty: Bool do return length == 0
+
+	# Gets the index of the first occurence of 'c'
 	#
-	#     assert "abcd"[2]         == 'c'
-	redef fun [](index) do return _items[index]
+	# Returns -1 if not found
+	fun index_of(c: Char): Int
+	do
+		return index_of_from(c, 0)
+	end
+
+	# Gets the index of the first occurence of ´c´ starting from ´pos´
+	#
+	# Returns -1 if not found
+	fun index_of_from(c: Char, pos: Int): Int
+	do
+		var iter = self.chars.iterator_from(pos)
+		while iter.is_ok do
+			if iter.item == c then return iter.index
+		end
+		return -1
+	end
+
+	# Gets the last index of char ´c´
+	#
+	# Returns -1 if not found
+	fun last_index_of(c: Char): Int
+	do
+		return last_index_of_from(c, length - 1)
+	end
+
+	# The index of the last occurrence of an element starting from pos (in reverse order).
+	# Example :
+	#		assert "/etc/bin/test/test.nit".last_index_of_from('/', length-1) == 13
+	#		assert "/etc/bin/test/test.nit".last_index_of_from('/', 12) == 8
+	#
+	# Returns -1 if not found
+	fun last_index_of_from(item: Char, pos: Int): Int
+	do
+		var iter = self.chars.reverse_iterator_from(pos)
+		while iter.is_ok do
+			if iter.item == item then return iter.index
+			iter.next
+		end
+		return -1
+	end
 
 	# Create a substring.
 	#
@@ -55,7 +101,7 @@ abstract class AbstractString
 		if from < count then
 			var r = new Buffer.with_capacity(count - from)
 			while from < count do
-				r.push(_items[from])
+				r.chars.push(_items[from])
 				from += 1
 			end
 			return r.to_s
@@ -142,7 +188,7 @@ abstract class AbstractString
 		var i = 0
 		var neg = false
 
-		for c in self
+		for c in self.chars
 		do
 			var v = c.to_i
 			if v > base then
@@ -173,7 +219,7 @@ abstract class AbstractString
 	fun is_numeric: Bool
 	do
 		var has_point_or_comma = false
-		for i in self
+		for i in self.chars
 		do
 			if not i.is_numeric
 			then
@@ -194,7 +240,7 @@ abstract class AbstractString
 	fun to_upper: String
 	do
 		var s = new Buffer.with_capacity(length)
-		for i in self do s.add(i.to_upper)
+		for i in self.chars do s.add(i.to_upper)
 		return s.to_s
 	end
 
@@ -204,7 +250,7 @@ abstract class AbstractString
 	fun to_lower : String
 	do
 		var s = new Buffer.with_capacity(length)
-		for i in self do s.add(i.to_lower)
+		for i in self.chars do s.add(i.to_lower)
 		return s.to_s
 	end
 
@@ -215,18 +261,18 @@ abstract class AbstractString
 	#     assert "\na\nb\tc\t".trim          == "a\nb\tc"
 	fun trim: String
 	do
-		if self._length == 0 then return self.to_s
+		if self.length == 0 then return self.to_s
 		# find position of the first non white space char (ascii < 32) from the start of the string
 		var start_pos = 0
-		while self[start_pos].ascii <= 32 do
+		while self.chars[start_pos].ascii <= 32 do
 			start_pos += 1
-			if start_pos == _length then return ""
+			if start_pos == length then return ""
 		end
 		# find position of the first non white space char from the end of the string
 		var end_pos = length - 1
-		while self[end_pos].ascii <= 32 do
+		while self.chars[end_pos].ascii <= 32 do
 			end_pos -= 1
-			if end_pos == start_pos then return self[start_pos].to_s
+			if end_pos == start_pos then return self.chars[start_pos].to_s
 		end
 		return self.substring(start_pos, end_pos - start_pos + 1)
 	end
@@ -245,7 +291,7 @@ abstract class AbstractString
 	do
 		var res = new Buffer
 		var underscore = false
-		for c in self do
+		for c in self.chars do
 			if (c >= 'a' and c <= 'z') or (c >='A' and c <= 'Z') then
 				res.add(c)
 				underscore = false
@@ -278,7 +324,7 @@ abstract class AbstractString
 	fun escape_to_c: String
 	do
 		var b = new Buffer
-		for c in self do
+		for c in self.chars do
 			if c == '\n' then
 				b.append("\\n")
 			else if c == '\0' then
@@ -311,7 +357,7 @@ abstract class StringCharView
 		target = tgt
 	end
 
-	redef fun is_empty do return target.is_empty
+	redef fun is_empty do return target.length == 0
 
 	redef fun length do return target.length
 
@@ -349,6 +395,10 @@ class String
 
 	redef type OTHER: String
 
+	private var _length: Int
+
+	redef fun length do return _length
+
 	# Index in _items of the start of the string
 	readable var _index_from: Int
 
@@ -361,15 +411,7 @@ class String
 	#       AbstractString specific methods        #
 	################################################
 
-	fun chars: StringCharView do return char_view
-
-	redef fun [](index) do
-		assert index >= 0
-		# Check that the index (+ index_from) is not larger than indexTo
-		# In other terms, if the index is valid
-		assert (index + _index_from) <= _index_to
-		return _items[index + _index_from]
-	end
+	redef fun chars: StringCharView do return char_view
 
 	redef fun substring(from: Int, count: Int): String
 	do
@@ -729,32 +771,27 @@ class Buffer
 	super AbstractString
 	super Comparable
 	super StringCapable
-	super AbstractArray[Char]
 
 	redef type OTHER: String
 
+	private var _length: Int
+
+	redef fun length do return _length
+
 	private var char_view: BufferCharView
 
-	redef fun []=(index, item)
-	do
-		if index == length then
-			add(item)
-			return
-		end
-		assert index >= 0 and index < length
-		_items[index] = item
-	end
+	redef fun chars: BufferCharView do return char_view
 
-	fun chars: BufferCharView do return char_view
+	fun clear do _length = 0
 
-	redef fun add(c)
+	fun add(c: Char)
 	do
 		if _capacity <= length then enlarge(length + 5)
 		_items[length] = c
 		_length += 1
 	end
 
-	redef fun enlarge(cap)
+	fun enlarge(cap: Int)
 	do
 		var c = _capacity
 		if cap <= c then return
@@ -763,18 +800,6 @@ class Buffer
 		_items.copy_to(a, length, 0, 0)
 		_items = a
 		_capacity = c
-	end
-
-	redef fun append(s)
-	do
-		if s isa String then
-			var sl = s.length
-			if _capacity < _length + sl then enlarge(_length + sl)
-			s.items.copy_to(_items, sl, s._index_from, _length)
-			_length += sl
-		else
-			super
-		end
 	end
 
 	redef fun to_s: String
@@ -795,8 +820,8 @@ class Buffer
 		var l1 = length
 		var l2 = s.length
 		while i < l1 and i < l2 do
-			var c1 = self[i].ascii
-			var c2 = s[i].ascii
+			var c1 = self.chars[i].ascii
+			var c2 = s.chars[i].ascii
 			if c1 < c2 then
 				return true
 			else if c2 < c1 then
@@ -835,6 +860,14 @@ class Buffer
 		_capacity = cap
 		_length = 0
 		char_view = new FlatBufferCharView(self)
+	end
+
+	fun append(s: String)
+	do
+		var sl = s.length
+		if _capacity < _length + sl then enlarge(_length + sl)
+		s.items.copy_to(_items, sl, s._index_from, _length)
+		_length += sl
 	end
 
 	redef fun ==(o)
@@ -907,6 +940,11 @@ private class FlatBufferCharView
 	redef fun add(c)
 	do
 		target.add(c)
+	end
+
+	redef fun push(c)
+	do
+		self.add(c)
 	end
 
 	fun enlarge(cap: Int)
@@ -1011,9 +1049,9 @@ redef class Int
 		# Sign
 		if self < 0 then
 			n = - self
-			s[0] = '-'
+			s.chars[0] = '-'
 		else if self == 0 then
-			s[0] = '0'
+			s.chars[0] = '0'
 			return
 		else
 			n = self
@@ -1021,7 +1059,7 @@ redef class Int
 		# Fill digits
 		var pos = digit_count(base) - 1
 		while pos >= 0 and n > 0 do 
-			s[pos] = (n % base).to_c
+			s.chars[pos] = (n % base).to_c
 			n = n / base # /
 			pos -= 1
 		end
@@ -1059,7 +1097,7 @@ redef class Float
 		var len = str.length
 		for i in [0..len-1] do
 			var j = len-1-i
-			var c = str[j]
+			var c = str.chars[j]
 			if c == '0' then
 				continue
 			else if c == '.' then
@@ -1112,7 +1150,7 @@ redef class Char
 	redef fun to_s
 	do
 		var s = new Buffer.with_capacity(1)
-		s[0] = self
+		s.chars[0] = self
 		return s.to_s
 	end
 

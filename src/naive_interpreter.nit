@@ -791,13 +791,13 @@ redef class AInternMethPropdef
 				if arg1 >= recvval.length or arg1 < 0 then
 					debug("Illegal access on {recvval} for element {arg1}/{recvval.length}")
 				end
-				return v.char_instance(recvval[arg1])
+				return v.char_instance(recvval.chars[arg1])
 			else if pname == "[]=" then
 				var arg1 = args[1].to_i
 				if arg1 >= recvval.length or arg1 < 0 then
 					debug("Illegal access on {recvval} for element {arg1}/{recvval.length}")
 				end
-				recvval[arg1] = args[2].val.as(Char)
+				recvval.chars[arg1] = args[2].val.as(Char)
 				return null
 			else if pname == "copy_to" then
 				# sig= copy_to(dest: NativeString, length: Int, from: Int, to: Int)
@@ -860,6 +860,17 @@ redef class AbstractArray[E]
 	fun copy(start: Int, len: Int, dest: AbstractArray[E], new_start: Int)
 	do
 		self.copy_to(start, len, dest, new_start)
+	end
+end
+
+redef class Buffer
+	fun copy(start: Int, len: Int, dest: Buffer, new_start: Int)
+	do
+		var self_chars = self.chars
+		var dest_chars = dest.chars
+		for i in [0..len-1] do
+			dest_chars[new_start+i] = self_chars[start+i]
+		end
 	end
 end
 
