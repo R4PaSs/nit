@@ -20,7 +20,7 @@ module local_var_init
 
 import scope
 import flow
-import phase
+intrude import phase
 
 redef class ToolContext
 	var local_var_init_phase: Phase = new LocalVarInitPhase(self, [flow_phase])

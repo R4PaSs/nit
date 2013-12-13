@@ -191,3 +191,24 @@ class ToolContext
 		end
 	end
 end
+
+class RTToolContext
+	super ToolContext
+
+	redef fun check_errors
+	do
+		if _messages.length > 0 then
+			_message_sorter.sort(_messages)
+
+			for m in _messages do
+				if opt_no_color.value then
+					stderr.write("{m}\n")
+				else
+					stderr.write("{m.to_color_string}\n")
+				end
+			end
+
+			_messages.clear
+		end
+	end
+end

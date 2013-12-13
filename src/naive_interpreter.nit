@@ -160,7 +160,7 @@ private class NaiveInterpreter
 	fun expr(n: AExpr): nullable Instance
 	do
 		var frame = self.frame
-		var old = frame.current_node
+		frame.previous_node = frame.current_node
 		frame.current_node = n
 		#n.debug("IN Execute expr")
 		var i = n.expr(self)
@@ -175,7 +175,8 @@ private class NaiveInterpreter
 
 		#n.debug("OUT Execute expr: value is {i}")
 		#if not is_subtype(i.mtype, n.mtype.as(not null)) then n.debug("Expected {n.mtype.as(not null)} got {i}")
-		frame.current_node = old
+		frame.current_node = frame.previous_node.as(not null)
+		frame.previous_node = n
 		return i
 	end
 
@@ -186,11 +187,12 @@ private class NaiveInterpreter
 	do
 		if n != null then
 			var frame = self.frame
-			var old = frame.current_node
+			frame.previous_node  = frame.current_node
 			frame.current_node = n
 			#n.debug("Execute stmt")
 			n.stmt(self)
-			frame.current_node = old
+			frame.current_node = frame.previous_node.as(not null)
+			frame.previous_node = n
 		end
 	end
 
@@ -282,7 +284,6 @@ private class NaiveInterpreter
 		else
 			self.frame.current_node.fatal(self, message)
 		end
-		exit(1)
 	end
 
 	# Debug on the current node
@@ -296,12 +297,9 @@ private class NaiveInterpreter
 	end
 
 	# Store known method, used to trace methods as thez are reached
-	var discover_call_trace: Set[MMethodDef] = new HashSet[MMethodDef]
+	var discover_call_trace: Set[MMethodDef] = new HashSet[MMethodDef] 
 
-	# Execute `mpropdef` for a `args` (where `args[0]` is the receiver).
-	# Return a falue if `mpropdef` is a function, or null if it is a procedure.
-	# The call is direct/static. There is no message-seding/late-binding.
-	fun call(mpropdef: MMethodDef, args: Array[Instance]): nullable Instance
+	fun call_commons(mpropdef: MMethodDef, args: Array[Instance])
 	do
 		var vararg_rank = mpropdef.msignature.vararg_rank
 		if vararg_rank >= 0 then
@@ -328,6 +326,14 @@ private class NaiveInterpreter
 				args.add(rawargs[i+1])
 			end
 		end
+	end
+
+	# Execute `mpropdef` for a `args` (where `args[0]` is the receiver).
+	# Return a falue if `mpropdef` is a function, or null if it is a procedure.
+	# The call is direct/static. There is no message-seding/late-binding.
+	fun call(mpropdef: MMethodDef, args: Array[Instance]): nullable Instance
+	do
+		call_commons(mpropdef, args)
 		return call_without_varargs(mpropdef, args)
 	end
 
@@ -360,8 +366,8 @@ private class NaiveInterpreter
 			return nclassdef.call(self, mpropdef, args)
 		else
 			fatal("Fatal Error: method {mpropdef} not found in the AST")
-			abort
 		end
+		return null
 	end
 
 	# Generate type checks in the C code to check covariant parameters
@@ -409,13 +415,8 @@ private class NaiveInterpreter
 		return null
 	end
 
-	# Execute `mproperty` for a `args` (where `args[0]` is the receiver).
-	# Return a falue if `mproperty` is a function, or null if it is a procedure.
-	# The call is polimotphic. There is a message-seding/late-bindng according to te receiver (args[0]).
-	fun send(mproperty: MMethod, args: Array[Instance]): nullable Instance
+	fun send_commons(mproperty: MMethod, args: Array[Instance], mtype: MType): nullable Instance
 	do
-		var recv = args.first
-		var mtype = recv.mtype
 		if mtype isa MNullType then
 			if mproperty.name == "==" then
 				return self.bool_instance(args[0] == args[1])
@@ -424,8 +425,19 @@ private class NaiveInterpreter
 			end
 			#fatal("Reciever is null. {mproperty}. {args.join(" ")} {self.frame.current_node.class_name}")
 			fatal("Reciever is null")
-			abort
 		end
+		return null
+	end
+
+	# Execute `mproperty` for a `args` (where `args[0]` is the receiver).
+	# Return a falue if `mproperty` is a function, or null if it is a procedure.
+	# The call is polimotphic. There is a message-seding/late-bindng according to te receiver (args[0]).
+	fun send(mproperty: MMethod, args: Array[Instance]): nullable Instance
+	do
+		var recv = args.first
+		var mtype = recv.mtype
+		var ret = send_commons(mproperty, args, mtype)
+		if ret != null then return ret
 		var propdef = mproperty.lookup_first_definition(self.mainmodule, mtype)
 		return self.call(propdef, args)
 	end
@@ -437,7 +449,6 @@ private class NaiveInterpreter
 		assert recv isa MutableInstance
 		if not recv.attributes.has_key(mproperty) then
 			fatal("Uninitialized attribute {mproperty.name}")
-			abort
 		end
 		return recv.attributes[mproperty]
 	end
@@ -590,6 +601,7 @@ end
 
 # Information about local variables in a running method
 private class Frame
+	var previous_node: nullable ANode = null
 	# The current visited node
 	# The node is stored by frame to keep a stack trace
 	var current_node: ANode
@@ -623,14 +635,28 @@ redef class APropdef
 	private fun call(v: NaiveInterpreter, mpropdef: MMethodDef, args: Array[Instance]): nullable Instance
 	do
 		fatal(v, "NOT YET IMPLEMENTED method kind {class_name}. {mpropdef}")
-		abort
+		return null
 	end
 end
 
 redef class AConcreteMethPropdef
+
 	redef fun call(v, mpropdef, args)
 	do
 		var f = new Frame(self, self.mpropdef.as(not null), args)
+		call_commons(v, mpropdef, args, f)
+		v.frames.shift
+		if v.returnmark == f then
+			v.returnmark = null
+			var res = v.escapevalue
+			v.escapevalue = null
+			return res
+		end
+		return null
+	end
+
+	private fun call_commons(v: NaiveInterpreter, mpropdef: MMethodDef, args: Array[Instance], f: Frame)
+	do
 		for i in [0..mpropdef.msignature.arity[ do
 			var variable = self.n_signature.n_params[i].variable
 			assert variable != null
@@ -659,14 +685,6 @@ redef class AConcreteMethPropdef
 		end
 
 		v.stmt(self.n_block)
-		v.frames.shift
-		if v.returnmark == f then
-			v.returnmark = null
-			var res = v.escapevalue
-			v.escapevalue = null
-			return res
-		end
-		return null
 	end
 end
 
@@ -703,7 +721,6 @@ redef class AInternMethPropdef
 			return v.bool_instance(args[0].mtype == args[1].mtype)
 		else if pname == "exit" then
 			exit(args[1].to_i)
-			abort
 		else if pname == "sys" then
 			return v.mainobj
 		else if cname == "Int" then
@@ -852,7 +869,7 @@ redef class AInternMethPropdef
 			return v.native_string_instance(txt)
 		end
 		fatal(v, "NOT YET IMPLEMENTED intern {mpropdef}")
-		abort
+		return null
 	end
 end
 
@@ -893,7 +910,7 @@ redef class AExternInitPropdef
 			return new PrimitiveInstance[OStream](mpropdef.mclassdef.mclass.mclass_type, new OFStream.open(a1.to_s))
 		end
 		fatal(v, "NOT YET IMPLEMENTED extern init {mpropdef}")
-		abort
+		return null
 	end
 end
 
@@ -999,7 +1016,7 @@ redef class AExternMethPropdef
 			return v.native_string_instance(getcwd)
 		end
 		fatal(v, "NOT YET IMPLEMENTED extern {mpropdef}")
-		abort
+		return null
 	end
 end
 
@@ -1029,7 +1046,7 @@ redef class AAttrPropdef
 			var val = v.expr(nexpr)
 			assert val != null
 			v.frames.shift
-			assert not v.is_escaping
+			if v.is_escaping then return
 			recv.attributes[self.mpropdef.mproperty] = val
 			return
 		end
@@ -1045,7 +1062,7 @@ redef class ADeferredMethPropdef
 	redef fun call(v, mpropdef, args)
 	do
 		fatal(v, "Deferred method called")
-		abort
+		return null
 	end
 end
 
@@ -1083,7 +1100,7 @@ redef class AExpr
 	private fun expr(v: NaiveInterpreter): nullable Instance
 	do
 		fatal(v, "NOT YET IMPLEMENTED expr {class_name}")
-		abort
+		return null
 	end
 
 	# Evaluate the node as a statement.
@@ -1208,7 +1225,6 @@ redef class AAbortExpr
 	redef fun stmt(v)
 	do
 		fatal(v, "Aborted")
-		exit(1)
 	end
 end
 
@@ -1330,7 +1346,6 @@ redef class AAssertExpr
 			else
 				fatal(v, "Assert failed")
 			end
-			exit(1)
 		end
 	end
 end

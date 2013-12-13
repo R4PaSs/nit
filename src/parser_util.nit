@@ -95,7 +95,7 @@ redef class ToolContext
 	# - a `AError` if nothing else matches
 	fun parse_something(string: String): ANode
 	do
-		var source = new SourceFile.from_string("", string)
+		var source = new SourceFile.from_string("rt_module", string)
 		var error
 		var tree
 		var eof
@@ -149,6 +149,8 @@ redef class ToolContext
 			return nblock
 		end
 		if eof.location > error.location then error = eof
+
+		source = new SourceFile.from_string("i", string+"\n")
 
 		lexer = new Lexer(source)
 		tree = (new Parser(lexer)).parse

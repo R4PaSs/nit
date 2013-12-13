@@ -71,6 +71,7 @@ class ModelBuilder
 		for mm in mmodules do
 			nmodules.add(mmodule2nmodule[mm])
 		end
+		
 		toolcontext.run_phases(nmodules)
 
 		if toolcontext.opt_only_metamodel.value then
@@ -96,7 +97,7 @@ class ModelBuilder
 			paths.append(path_env.split_with(':'))
 		end
 
-		path_env = "NIT_DIR".environ
+		path_env = "NIT_DIR".environ 
 		if not path_env.is_empty then
 			var libname = "{path_env}/lib"
 			if libname.file_exists then paths.add(libname)
@@ -104,6 +105,23 @@ class ModelBuilder
 
 		var libname = "{sys.program_name.dirname}/../lib"
 		if libname.file_exists then paths.add(libname.simplify_path)
+	end
+
+	fun parse_from_string(mods_cnt_map: Map[String, String]): Array[MModule]
+	do
+		var time0 = get_time
+		# Parse and recursively load
+		var mmodules = new Array[MModule]
+		for a in mods_cnt_map.keys do
+			var nmodule = self.load_module_from_string(null, mods_cnt_map[a], a)
+			if nmodule == null then continue # Skip error
+			mmodules.add(nmodule.mmodule.as(not null))
+		end
+		var time1 = get_time
+
+		self.toolcontext.check_errors
+
+		return mmodules	
 	end
 
 	# Load a bunch of modules.
@@ -359,9 +377,6 @@ class ModelBuilder
 		return path
 	end
 
-	# Try to load a module using a path.
-	# Display an error if there is a problem (IO / lexer / parser) and return null
-	# Note: usually, you do not need this method, use `get_mmodule_by_name` instead.
 	fun load_module(owner: nullable MModule, filename: String): nullable AModule
 	do
 		if not filename.file_exists then
@@ -378,7 +393,40 @@ class ModelBuilder
 		var parser = new Parser(lexer)
 		var tree = parser.parse
 		file.close
+		var mod_name = filename.basename(".nit")
+		return load_module_commons(owner, tree, mod_name)
+	end
 
+	fun load_module_from_string(owner: nullable MModule, code : String, module_name: String): nullable AModule
+	do
+		var mod_name = "rt_module"
+		var tree = (new Parser(new Lexer(new SourceFile.from_string(mod_name, code)))).parse
+		return load_module_commons(owner, tree, mod_name)
+	end
+
+	fun load_rt_module(owner: MModule, nmodule: AModule, mod_name: String): nullable AModule
+	do
+		# Create the module
+		var mmodule = new MModule(model, owner, mod_name, nmodule.location)
+		nmodule.mmodule = mmodule
+		nmodules.add(nmodule)
+		self.mmodule2nmodule[mmodule] = nmodule
+		
+		var imported_modules = new Array[MModule]
+
+		imported_modules.add(owner)
+		mmodule.set_visibility_for(owner, intrude_visibility)
+
+		mmodule.set_imported_mmodules(imported_modules)
+		
+		return nmodule
+	end
+
+	# Try to load a module using a path.
+	# Display an error if there is a problem (IO / lexer / parser) and return null
+	# Note: usually, you do not need this method, use `get_mmodule_by_name` instead.
+	private fun load_module_commons(owner: nullable MModule, tree: Start, mod_name: String): nullable AModule
+	do
 		# Handle lexer and parser error
 		var nmodule = tree.n_base
 		if nmodule == null then
@@ -389,7 +437,6 @@ class ModelBuilder
 		end
 
 		# Check the module name
-		var mod_name = filename.basename(".nit")
 		var decl = nmodule.n_moduledecl
 		if decl == null then
 			#warning(nmodule, "Warning: Missing 'module' keyword") #FIXME: NOT YET FOR COMPATIBILITY

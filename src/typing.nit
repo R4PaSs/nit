@@ -34,6 +34,7 @@ end
 
 private class TypingPhase
 	super Phase
+
 	redef fun process_npropdef(npropdef) do npropdef.do_typing(toolcontext.modelbuilder)
 end
 
