@@ -1,0 +1,59 @@
+Grammar ltl;
+
+Lexer
+l = 'a'..'z'|'A'..'Z'|'_';
+d = '0'..'9';
+id = l (l|d|'$'|'#'|'-')*;
+int = '-'? d+;
+bool = 'TRUE' | 'FALSE';
+blank = ' ' | '\n' | '\t';
+
+Parser
+Ignored blank;
+
+s = ltlexp;
+
+ltlexp =			{not:} '!' ltlexp2 |
+				ltlexp2 {->} ;
+
+ltlexp2{->ltlexp} = 		{and:} ltlexp2 '&' ltlexp3 |
+				{or:} ltlexp2 '|' ltlexp3 |
+				{then:} ltlexp2 '->' ltlexp3 |
+				{iff:} ltlexp2 '<->' ltlexp3 |
+				ltlexp3 {->} ;
+
+ltlexp3{->ltlexp} =		{until:} ltlexp3 'U' ltlexp4 |
+				ltlexp4 {->} ;
+
+ltlexp4{->ltlexp} =		{par:} '(' ltlexp ')' |
+				{finally:} 'F' ltlexp4 |
+				{globally:} 'G' ltlexp4 |
+				{next:} 'X' ltlexp4 |
+				{simple:} simple_expr3;
+
+simple_expr3{->ltlexp} =	{eq:} simple_expr3 '=' simple_expr4 |
+				{lt:} simple_expr3 '<' simple_expr4 |
+				{gt:} simple_expr3 '>' simple_expr4 |
+				{ge:} simple_expr3 '>=' simple_expr4 |
+				{le:} simple_expr3 '<=' simple_expr4 |
+				simple_expr4 {->};
+
+simple_expr4{->ltlexp} =	{add:} simple_expr4 '+' simple_expr5 |
+				{sub:} simple_expr4 '-' simple_expr5 |
+				simple_expr5 {->};
+
+simple_expr5{->ltlexp} = 	{mul:} simple_expr5 '*' constant |
+				{div:} simple_expr5 '/' constant |
+				{enum:} id 'in' enum_block |
+				{constant:} constant;
+
+constant = 			{boolcst:} bool |
+				{int:} int |
+				{id:} id |
+				{range:} int '..' int;
+
+enum_block =			'{' elements '}';
+
+elements =			{many:} elements ',' constant |
+				{one:} constant;
+

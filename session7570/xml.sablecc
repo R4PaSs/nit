@@ -1,0 +1,36 @@
+Grammar xml;
+
+Lexer
+
+spaces = (#10 | #13 | #32 | #9)+;
+
+string = '"' (Any-'"'-'\\'|'\\'Any)* '"';
+
+valdata = ('A'..'Z'|'a'..'z'|'0'..'9'|'-'|'_'|',')+;
+
+Parser
+
+Ignored spaces;
+
+xmldoc = 	xmldecl counterexample;
+
+counterexample = '<counter-example type=' string ' desc=' string '>' nodes loop '</counter-example>';
+
+loop = '<loops>' valdata* '</loops>';
+
+nodes = nodes node | node;
+
+node = '<node>' state input? '</node>';
+
+state = '<state id=' string '>' values '</state>';
+
+input = '<input id=' string '>' values '</input>';
+
+values = values value | value;
+
+value = '<value variable=' string '>' valdata '</value>';
+
+xmldecl = '<?xml version='string' encoding='string'?>';
+
+attribute = valdata '=' string;
+

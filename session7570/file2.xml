@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<counter-example type="0" desc="LTL Counterexample" >
+	<node>
+		<state id="1">
+			<value variable="contenu">vide</value>
+		</state>
+		<input id="2">
+			<value variable="action">e0</value>
+		</input>
+	</node>
+	<node>
+		<state id="2">
+			<value variable="contenu">c0</value>
+		</state>
+		<input id="3">
+			<value variable="action">d0</value>
+		</input>
+	</node>
+	<node>
+		<state id="3">
+			<value variable="contenu">vide</value>
+		</state>
+	</node>
+	<loops> 1 </loops>
+</counter-example>
