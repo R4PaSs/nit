@@ -100,7 +100,7 @@ abstract class Rope
 	private var str_representation: nullable NativeString = null
 
 	# Empty Rope
-	init do from("")
+	init do root = empty_leaf
 
 	# Creates a new Rope with `s` as root
 	init from(s: String) do
@@ -859,6 +859,9 @@ private class ReverseRopeCharIterator
 		end
 	end
 end
+
+# Returns a Leaf containing "" only
+private fun empty_leaf: Leaf do return once new Leaf("".as(FlatString))
 
 # Threshold after which a concatenation will produce a Rope instead of a Flat
 private fun cct_threshold: Int do return 50
