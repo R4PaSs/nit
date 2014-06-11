@@ -402,6 +402,14 @@ end
 
 redef class FlatString
 
+	redef fun +(o)
+	do
+		if (self.length + o.length) > cct_threshold then
+			return new RopeString.from(self) + o
+		end
+		return super
+	end
+
 	redef fun append(s) do return (new RopeString.from(self)) + s
 
 	redef fun prepend(s) do return (new RopeString.from(self)).prepend(s)
@@ -851,4 +859,7 @@ private class ReverseRopeCharIterator
 		end
 	end
 end
+
+# Threshold after which a concatenation will produce a Rope instead of a Flat
+private fun cct_threshold: Int do return 50
 
