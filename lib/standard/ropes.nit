@@ -309,6 +309,27 @@ class RopeString
 			last_concat = cct
 		end
 
+		var cct: RopeNode
+
+		if last_concat.length < leaf_threshold then
+			cct = last_concat.to_leaf
+		else
+			cct = last_concat
+		end
+
+		if path.stack.is_empty then return new RopeString.from_root(cct)
+
+		var tmp = path.stack.pop
+		last_concat = new Concat
+
+		if tmp.left then
+			last_concat.right = tmp.node.right.as(not null)
+			last_concat.left = cct
+		else
+			last_concat.left = tmp.node.left.as(not null)
+			last_concat.right = cct
+		end
+
 		for i in path.stack.reverse_iterator do
 			var nod = new Concat
 			if i.left then
@@ -878,4 +899,7 @@ private fun empty_leaf: Leaf do return once new Leaf("".as(FlatString))
 
 # Threshold after which a concatenation will produce a Rope instead of a Flat
 private fun cct_threshold: Int do return 50
+
+# Threshold below which an addition to a Leaf of the Rope will produce a concatenation of Flats
+private fun leaf_threshold: Int do return 30
 
