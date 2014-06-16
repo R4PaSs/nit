@@ -1064,3 +1064,6 @@ private fun cct_threshold: Int do return 50
 # Threshold below which an addition to a Leaf of the Rope will produce a concatenation of Flats
 private fun leaf_threshold: Int do return 30
 
+# Standard length of a Leaf's buffer
+private fun buf_len: Int do return 150
+
