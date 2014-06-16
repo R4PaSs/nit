@@ -86,11 +86,14 @@ private class Concat
 end
 
 # Leaf of a Rope, contains a FlatString
-private class Leaf
+private abstract class Leaf
 	super RopeNode
 
-	# Encapsulated FlatString in the leaf node
-	var str: FlatString
+	var str: FlatText
+
+	redef fun to_leaf do return self
+end
+
 
 	init(val: FlatString) do
 		self.str = val
