@@ -56,6 +56,17 @@ redef class FlatBuffer
 		return new FlatString.with_infos(items, length, 0, length - 1)
 	end
 
+	redef fun append(o)
+	do
+		if o isa RopeString then
+			for i in o.substrings do
+				self.append(o)
+			end
+		else
+			super
+		end
+	end
+
 end
 
 # Node that represents a concatenation between two nodes (of any RopeNode type)
