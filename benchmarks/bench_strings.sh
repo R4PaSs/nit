@@ -22,6 +22,7 @@ count=10
 echo "Compiling"
 
 ../bin/nitg --global ./strings/concat_bench.nit --make-flags "CFLAGS=\"-g -O2 -DNOBOEHM\""
+../bin/nitg --global ./strings/cct_bench.nit --make-flags "CFLAGS=\"-g -O2 -DNOBOEHM\""
 
 #
 #
@@ -57,19 +58,40 @@ function bench_command()
 	#rm $timeout
 }
 
-#
-echo "Starting bench"
+#echo "*** Benching thresholds ***"
 
-prepare_res concat_ropes.out concat_ropes ropes
+#prepare_res concat_ropes.out concat_ropes ropes
+#for i in `seq 1 "$1"`; do
+#	echo "String length = $i"
+#	bench_command $i ropes$i ./concat_bench rope $i $2 "NIT_GC_CHOOSER=large"
+#done
+
+#prepare_res concat_flat.out concat_flat flat
+#for i in `seq 1 "$1"`; do
+#	echo "String length = $i"
+#	bench_command $i flat$i ./concat_bench flat $i $2 "NIT_GC_CHOOSER=large"
+#done
+
+#plot concat.gnu
+
+echo "*** Benching general concatenation performance ***"
+
+prepare_res cct_flatstring.out cct_flatstring cct_flatstring
 for i in `seq 1 "$1"`; do
 	echo "String length = $i"
-	bench_command $i ropes$i ./concat_bench rope $i $2
+	bench_command $i flatstring$i ./cct_bench flats $i $2 "NIT_GC_CHOOSER=large"
 done
 
-prepare_res concat_flat.out concat_flat flat
+prepare_res cct_ropestring.out cct_ropestring cct_ropestring
 for i in `seq 1 "$1"`; do
 	echo "String length = $i"
-	bench_command $i flat$i ./concat_bench flat $i $2
+	bench_command $i ropestring$i ./cct_bench rope $i $2 "NIT_GC_CHOOSER=large"
 done
 
-plot concat.gnu
+prepare_res cct_flatbuffer.out cct_flatbuffer cct_flatbuffer
+for i in `seq 1 "$1"`; do
+	echo "String length = $i"
+	bench_command $i flatbuffer$i ./cct_bench flatb $i $2 "NIT_GC_CHOOSER= large"
+done
+
+plot cct.gnu
