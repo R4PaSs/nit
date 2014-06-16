@@ -48,6 +48,16 @@ private abstract class RopeNode
 	fun to_leaf: Leaf is abstract
 end
 
+redef class FlatBuffer
+
+	# Same as to_s, only will not copy self before returning a String.
+	private fun lazy_to_s: FlatString
+	do
+		return new FlatString.with_infos(items, length, 0, length - 1)
+	end
+
+end
+
 # Node that represents a concatenation between two nodes (of any RopeNode type)
 private class Concat
 	super RopeNode
@@ -77,11 +87,21 @@ private class Concat
 	redef fun to_leaf
 	do
 		if left == null then
-			if right == null then return new Leaf("".as(FlatString))
+			if right == null then return empty_leaf
 			return right.to_leaf
 		end
 		if right == null then return left.as(not null).to_leaf
-		return new Leaf((left.to_leaf.str + right.to_leaf.str).as(FlatString))
+		if left.length + right.length < buf_len then
+			var b = new FlatBuffer.with_capacity(buf_len)
+			b.append(left.to_leaf.str)
+			b.append(right.to_leaf.str)
+			return new BufferLeaf(b)
+		else
+			var b = new FlatBuffer.with_capacity(left.length + right.length)
+			b.append(left.to_leaf.str)
+			b.append(right.to_leaf.str)
+			return new StringLeaf(b.lazy_to_s)
+		end
 	end
 end
 
@@ -94,13 +114,23 @@ private abstract class Leaf
 	redef fun to_leaf do return self
 end
 
+private class StringLeaf
+	super Leaf
 
 	init(val: FlatString) do
 		self.str = val
 		length = str.length
 	end
+end
 
-	redef fun to_leaf do return self
+private class BufferLeaf
+	super Leaf
+
+	init(val: FlatBuffer) do
+		self.str = val
+		length = str.length
+	end
+
 end
 
 # Basic structure, binary tree with a root node.
@@ -116,12 +146,10 @@ abstract class Rope
 	private var str_representation: nullable NativeString = null
 
 	# Empty Rope
-	init do root = empty_leaf
+	init do root = new BufferLeaf(new FlatBuffer.with_capacity(buf_len))
 
 	# Creates a new Rope with `s` as root
-	init from(s: String) do
-		if s isa RopeString then root = s.root else root = new Leaf(s.as(FlatString))
-	end
+	init from(s: String) do end
 
 	private init from_root(r: RopeNode)
 	do
@@ -190,8 +218,39 @@ abstract class Rope
 	# Path to the Leaf for `position`
 	private fun node_at(position: Int): Path
 	do
-		assert position >= 0 and position < length
+		assert position >= 0 and position <= length
+		if position == length then
+			var st = new List[PathElement]
+			stack_to_end(root,st)
+			if not st.is_empty then
+				var lst = st.last
+				var lf = lst.node.right
+				if lf != null then
+					return new Path(lf.as(Leaf), lf.length, st)
+				else
+					lf = lst.node.left
+					return new Path(lf.as(Leaf), lf.length, st)
+				end
+			else
+				return new Path(root.as(Leaf), length, st)
+			end
+		end
 		return get_node_from(root.as(not null), 0, position, new List[PathElement])
+	end
+
+	# Special case for when the required pos is length
+	private fun stack_to_end(nod: RopeNode, st: List[PathElement])
+	do
+		if nod isa Leaf then return
+		var n = nod.as(Concat)
+		var r = n.right
+		var ele = new PathElement(n)
+		ele.right = true
+		st.push(ele)
+		if r != null then
+			stack_to_end(r, st)
+		end
+		return
 	end
 
 	# Builds the path to Leaf at position `seek_pos`
@@ -235,6 +294,16 @@ end
 class RopeString
 	super Rope
 	super String
+
+	init from(s) do
+		if s.length < buf_len then
+			var b = new FlatBuffer.with_capacity(buf_len)
+			b.append(s)
+			root = new BufferLeaf(b)
+		else
+			if s isa RopeString then root = s.root else root = new StringLeaf(s.as(FlatString))
+		end
+	end
 
 	redef fun to_s do return self
 
@@ -288,42 +357,33 @@ class RopeString
 
 		assert pos >= 0 and pos <= length
 
-		if pos == length then return append(str).as(RopeString)
-
 		var path = node_at(pos)
-
-		var last_concat = new Concat
-
-		if path.offset == 0 then
-			last_concat.right = path.leaf
-			if str isa FlatString then last_concat.left = new Leaf(str) else last_concat.left = str.as(RopeString).root
-		else if path.offset == path.leaf.length then
-			if str isa FlatString then last_concat.right = new Leaf(str) else last_concat.right = str.as(RopeString).root
-			last_concat.left = path.leaf
-		else
-			var s = path.leaf.str
-			var l_half = s.substring(0, s.length - path.offset)
-			var r_half = s.substring_from(s.length - path.offset)
-			var cct = new Concat
-			cct.right = new Leaf(r_half.as(FlatString))
-			last_concat.left = new Leaf(l_half.as(FlatString))
-			if str isa FlatString then last_concat.right = new Leaf(str) else last_concat.right = str.as(RopeString).root
-			cct.left = last_concat
-			last_concat = cct
-		end
 
 		var cct: RopeNode
 
-		if last_concat.length < leaf_threshold then
-			cct = last_concat.to_leaf
+		if path.offset == 0 then
+			cct = build_node_zero_offset(path, str)
+		else if path.offset == path.leaf.length then
+			cct = build_node_len_offset(path, str)
+			#if str isa FlatString then last_concat.right = new Leaf(str) else last_concat.right = str.as(RopeString).root
+			#last_concat.left = path.leaf
 		else
-			cct = last_concat
+			cct = build_node_other(path,str)
+			#var s = path.leaf.str
+			#var l_half = s.substring(0, s.length - path.offset)
+			#var r_half = s.substring_from(s.length - path.offset)
+			#var cct = new Concat
+			#cct.right = new Leaf(r_half.as(FlatString))
+			#last_concat.left = new Leaf(l_half.as(FlatString))
+			#if str isa FlatString then last_concat.right = new Leaf(str) else last_concat.right = str.as(RopeString).root
+			#cct.left = last_concat
+			#last_concat = cct
 		end
 
 		if path.stack.is_empty then return new RopeString.from_root(cct)
 
 		var tmp = path.stack.pop
-		last_concat = new Concat
+		var last_concat = new Concat
 
 		if tmp.left then
 			last_concat.right = tmp.node.right.as(not null)
@@ -348,33 +408,111 @@ class RopeString
 		return new RopeString.from_root(last_concat)
 	end
 
+	private fun build_node_zero_offset(path: Path, s: String): RopeNode
+	do
+		var finlen = path.leaf.length + s.length
+		if finlen <= buf_len then
+			var b = new FlatBuffer.with_capacity(buf_len)
+			b.append(s)
+			b.append(path.leaf.str)
+			if finlen == buf_len then return new StringLeaf(b.lazy_to_s)
+			return new BufferLeaf(b)
+		end
+		var cct = new Concat
+		cct.right = path.leaf
+		if s isa FlatString then
+			if s.length > buf_len then
+				cct.left = new StringLeaf(s)
+			else
+				var b = new FlatBuffer
+				b.append(s)
+				cct.left = new BufferLeaf(b)
+			end
+		else
+			cct.left = s.as(RopeString).root
+		end
+		return cct
+	end
+
+	private fun build_node_len_offset(path: Path, s: String): RopeNode
+	do
+		var leaf = path.leaf
+		if leaf isa BufferLeaf then
+			if s.length > buf_len then
+				if s isa FlatString then
+					return new StringLeaf(s)
+				else
+					return s.as(Rope).root
+				end
+			end
+			var finlen = leaf.length + s.length
+			var buf = leaf.str.as(FlatBuffer)
+			var cap = buf.capacity
+			if finlen <= cap then
+				buf.append(s)
+				if finlen == buf_len then return new StringLeaf(buf.lazy_to_s)
+				return new BufferLeaf(buf)
+			else
+				var l_len = finlen - cap
+				buf.append(s.substring(0,l_len))
+				var b2 = new FlatBuffer.with_capacity(buf_len)
+				b2.append(s.substring_from(l_len))
+				var left_leaf = new StringLeaf(buf.lazy_to_s)
+				var right_leaf = new BufferLeaf(b2)
+				var cct = new Concat
+				cct.left = left_leaf
+				cct.right = right_leaf
+				return cct
+			end
+		else
+			var cct = new Concat
+			cct.left = leaf
+			if s.length >= buf_len then
+				if s isa FlatString then cct.right = new StringLeaf(s) else cct.right = s.as(Rope).root
+			else
+				var buf = new FlatBuffer.with_capacity(buf_len)
+				buf.append(s)
+				cct.right = new BufferLeaf(buf)
+			end
+			return cct
+		end
+	end
+
+	private fun build_node_other(path: Path,str: String): RopeNode
+	do
+		var lf = path.leaf
+		var s: FlatString
+		if lf isa BufferLeaf then
+			var b = lf.str.as(FlatBuffer)
+			s = b.lazy_to_s
+		else
+			s = lf.str.as(FlatString)
+		end
+		var l_str = s.substring(0, path.offset)
+		var r_str = s.substring_from(path.offset)
+		if s.length + str.length < buf_len then
+			var buf = new FlatBuffer.with_capacity(buf_len)
+			buf.append(l_str)
+			buf.append(str)
+			buf.append(r_str)
+			return new BufferLeaf(buf)
+		end
+		var l_cct = new Concat
+		var r_cct = new Concat
+		l_cct.left = new StringLeaf(l_str.as(FlatString))
+		if str isa FlatString then l_cct.right = new StringLeaf(str) else l_cct.right = str.as(Rope).root
+		r_cct.left = l_cct
+		r_cct.right = new StringLeaf(r_str.as(FlatString))
+		return r_cct
+	end
+
 	# Adds `s` at the beginning of self
 	redef fun prepend(s) do return insert_at(s, 0)
 
 	# Adds `s` at the end of self
 	redef fun append(s)
 	do
-		if self.is_empty then return s
-		return new RopeString.from_root(append_to_path(root,s))
-	end
-
-	# Builds a new path from root to the rightmost node with s appended
-	private fun append_to_path(node: RopeNode, s: String): RopeNode
-	do
-		var cct = new Concat
-		if node isa Leaf then
-			cct.left = node
-			if s isa FlatString then cct.right = new Leaf(s) else cct.right = s.as(RopeString).root
-		else if node isa Concat then
-			var right = node.right
-			if node.left != null then cct.left = node.left.as(not null)
-			if right == null then
-				if s isa FlatString then cct.right = new Leaf(s) else cct.right = s.as(RopeString).root
-			else
-				cct.right = append_to_path(right, s)
-			end
-		end
-		return cct
+		return insert_at(s, length)
 	end
 
 	# O(log(n))
@@ -394,14 +532,25 @@ class RopeString
 
 		if pos + len > length then len = length - pos
 
-		if len <= 0 then return new RopeString.from("")
+		if len <= 0 then return new RopeString
 
 		var path = node_at(pos)
 
 		var lf = path.leaf
 		var offset = path.offset
 
-		if path.leaf.str.length - offset > len then lf = new Leaf(lf.str.substring(offset,len).as(FlatString)) else lf = new Leaf(lf.str.substring_from(offset).as(FlatString))
+		var s: FlatString
+		if lf isa StringLeaf then
+			s = lf.str.as(FlatString)
+		else
+			s = lf.str.as(FlatBuffer).lazy_to_s
+		end
+
+		if path.leaf.str.length - offset > len then
+			lf = new StringLeaf(s.substring(offset,len).as(FlatString))
+		else
+			lf = new StringLeaf(s.substring_from(offset).as(FlatString))
+		end
 
 		var nod: RopeNode = lf
 
@@ -420,7 +569,16 @@ class RopeString
 		path = ret.node_at(len-1)
 
 		offset = path.offset
-		nod = new Leaf(path.leaf.str.substring(0, offset+1).as(FlatString))
+
+		lf = path.leaf
+
+		if lf isa StringLeaf then
+			s = lf.str.as(FlatString)
+		else
+			s = lf.str.as(FlatBuffer).lazy_to_s
+		end
+
+		nod = new StringLeaf(s.substring(0, offset+1).as(FlatString))
 
 		for i in path.stack.reverse_iterator do
 			if i.left then continue
