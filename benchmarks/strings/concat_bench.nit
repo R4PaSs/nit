@@ -43,8 +43,8 @@ do
 
 	for i in [0..count] do
 		var cct = new Concat
-		var l = new Leaf(lft)
-		var r = new Leaf(rgt)
+		var l = new StringLeaf(lft)
+		var r = new StringLeaf(rgt)
 		cct.right = r
 		cct.left = l
 		var str = new RopeString.from_root(cct)
