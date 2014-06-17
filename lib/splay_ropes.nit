@@ -54,3 +54,54 @@ redef class Rope
 	end
 end
 
+redef class RopeString
+
+	# Inserts a String `str` at position `pos`
+	redef fun insert_at(str, pos)
+	do
+		if str.length == 0 then return self
+		if self.length == 0 then return new RopeString.from(str)
+
+		assert pos >= 0 and pos <= length
+
+		var path = node_at(pos)
+
+		var cct: RopeNode
+
+		if path.offset == 0 then
+			cct = build_node_zero_offset(path, str)
+		else if path.offset == path.leaf.length then
+			cct = build_node_len_offset(path, str)
+		else
+			cct = build_node_other(path,str)
+		end
+
+		var st = path.stack
+
+		if st.is_empty then return new RopeString.from_root(cct)
+
+		var tmp = st.pop
+		var last_concat: Concat
+
+		if tmp.left then
+			last_concat = new Concat(cct,tmp.node.right.as(not null))
+			var pe = new PathElement(last_concat)
+			pe.left = true
+			st.push(pe)
+		else
+			last_concat = new Concat(tmp.node.left.as(not null), cct)
+			var pe = new PathElement(last_concat)
+			pe.right = true
+			st.push(pe)
+		end
+
+		if cct isa Concat then
+			var pe = new PathElement(cct)
+			st.push(pe)
+		end
+
+		return new RopeString.from_root(splay(path).as(not null))
+	end
+
+end
+
