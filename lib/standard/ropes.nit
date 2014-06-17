@@ -74,25 +74,16 @@ private class Concat
 	super RopeNode
 
 	# Left child of the node
-	var _left: nullable RopeNode = null
+	var left: nullable RopeNode = null
 	# Right child of the node
-	var _right: nullable RopeNode = null
+	var right: nullable RopeNode = null
 
-	fun left: nullable RopeNode do return _left
-	fun right: nullable RopeNode do return _right
-
-	fun left=(l: RopeNode)
+	init(l: nullable RopeNode, r: nullable RopeNode)
 	do
-		_left = l
-		length = l.length
-		if _right != null then length += _right.length
-	end
-
-	fun right=(r: RopeNode)
-	do
-		_right = r
-		length = r.length
-		if _left != null then length += _left.length
+		left = l
+		right = r
+		if left != null then length += left.length
+		if right != null then length += right.length
 	end
 
 	redef fun to_leaf
@@ -394,24 +385,20 @@ class RopeString
 		if path.stack.is_empty then return new RopeString.from_root(cct)
 
 		var tmp = path.stack.pop
-		var last_concat = new Concat
+		var last_concat: Concat
 
 		if tmp.left then
-			last_concat.right = tmp.node.right.as(not null)
-			last_concat.left = cct
+			last_concat = new Concat(cct,tmp.node.right.as(not null))
 		else
-			last_concat.left = tmp.node.left.as(not null)
-			last_concat.right = cct
+			last_concat = new Concat(tmp.node.left.as(not null), cct)
 		end
 
 		for i in path.stack.reverse_iterator do
-			var nod = new Concat
+			var nod: Concat
 			if i.left then
-				nod.right = i.node.right.as(not null)
-				nod.left = last_concat
+				nod = new Concat(last_concat, i.node.right.as(not null))
 			else
-				nod.left = i.node.left.as(not null)
-				nod.right = last_concat
+				nod = new Concat(i.node.left.as(not null), last_concat)
 			end
 			last_concat = nod
 		end
@@ -429,20 +416,20 @@ class RopeString
 			if finlen == buf_len then return new StringLeaf(b.lazy_to_s)
 			return new BufferLeaf(b)
 		end
-		var cct = new Concat
-		cct.right = path.leaf
+		var rht = path.leaf
+		var lft: RopeNode
 		if s isa FlatString then
 			if s.length > buf_len then
-				cct.left = new StringLeaf(s)
+				lft = new StringLeaf(s)
 			else
 				var b = new FlatBuffer
 				b.append(s)
-				cct.left = new BufferLeaf(b)
+				lft = new BufferLeaf(b)
 			end
 		else
-			cct.left = s.as(RopeString).root
+			lft = s.as(RopeString).root
 		end
-		return cct
+		return new Concat(lft, rht)
 	end
 
 	private fun build_node_len_offset(path: Path, s: String): RopeNode
@@ -470,22 +457,20 @@ class RopeString
 				b2.append(s.substring_from(l_len))
 				var left_leaf = new StringLeaf(buf.lazy_to_s)
 				var right_leaf = new BufferLeaf(b2)
-				var cct = new Concat
-				cct.left = left_leaf
-				cct.right = right_leaf
+				var cct = new Concat(left_leaf, right_leaf)
 				return cct
 			end
 		else
-			var cct = new Concat
-			cct.left = leaf
+			var lft = leaf
+			var rht: RopeNode
 			if s.length >= buf_len then
-				if s isa FlatString then cct.right = new StringLeaf(s) else cct.right = s.as(Rope).root
+				if s isa FlatString then rht = new StringLeaf(s) else rht = s.as(Rope).root
 			else
 				var buf = new FlatBuffer.with_capacity(buf_len)
 				buf.append(s)
-				cct.right = new BufferLeaf(buf)
+				rht = new BufferLeaf(buf)
 			end
-			return cct
+			return new Concat(lft,rht)
 		end
 	end
 
@@ -508,12 +493,10 @@ class RopeString
 			buf.append(r_str)
 			return new BufferLeaf(buf)
 		end
-		var l_cct = new Concat
-		var r_cct = new Concat
-		l_cct.left = new StringLeaf(l_str.as(FlatString))
-		if str isa FlatString then l_cct.right = new StringLeaf(str) else l_cct.right = str.as(Rope).root
-		r_cct.left = l_cct
-		r_cct.right = new StringLeaf(r_str.as(FlatString))
+		var child: RopeNode
+		if str isa FlatString then child = new StringLeaf(str) else child = str.as(Rope).root
+		var l_cct = new Concat(new StringLeaf(l_str.as(FlatString)), child)
+		var r_cct = new Concat(l_cct, new StringLeaf(r_str.as(FlatString)))
 		return r_cct
 	end
 
@@ -565,13 +548,14 @@ class RopeString
 
 		var nod: RopeNode = lf
 
+		var lft: nullable RopeNode
+		var rht: nullable RopeNode
+
 		for i in path.stack.reverse_iterator do
 			if i.right then continue
-			var tmp = new Concat
-			tmp.left = nod
-			var r = i.node.right
-			if r != null then tmp.right = r
-			nod = tmp
+			lft = nod
+			rht = i.node.right
+			nod = new Concat(lft, rht)
 		end
 
 		var ret = new RopeString
@@ -593,11 +577,9 @@ class RopeString
 
 		for i in path.stack.reverse_iterator do
 			if i.left then continue
-			var tmp = new Concat
-			tmp.right = nod
-			var l = i.node.left
-			if l != null then tmp.left = l
-			nod = tmp
+			rht = nod
+			lft = i.node.left
+			nod = new Concat(lft, rht)
 		end
 
 		ret.root = nod
