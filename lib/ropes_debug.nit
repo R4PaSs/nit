@@ -30,7 +30,7 @@ end
 redef class Leaf
 	redef fun to_dot(s): String
 	do
-		s += "n{object_id} [label = \"{str}\" shape = rect];\n"
+		s += "n{object_id} [label = \"{str}\" shape = rect\nLength = \"{length}\"];\n"
 		s += "n{str.object_id} -> n{object_id} [label = \"contains\"];\n"
 		s = str.to_dot(s)
 		return s
@@ -53,10 +53,21 @@ redef class Concat
 	end
 end
 
+redef class FlatText
+	fun to_dot(s: String): String is abstract
+end
+
 redef class FlatString
-	fun to_dot(s: String): String
+	redef fun to_dot(s: String): String
 	do
 		return s + "n{object_id} [label=\"FlatString\\nindex_from = {index_from}\\nindex_to = {index_to}\\nNativeString = {items.to_s_with_length(items.cstring_length)}\"];\n"
+	end
+end
+
+redef class FlatBuffer
+	redef fun to_dot(s: String): String
+	do
+		return s + "n{object_id} [label]"
 	end
 end
 
@@ -72,5 +83,4 @@ redef class RopeString
 		return ret
 	end
 end
-
 
