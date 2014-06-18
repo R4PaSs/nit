@@ -48,23 +48,41 @@ private abstract class RopeNode
 	fun to_leaf: Leaf is abstract
 end
 
+redef class FlatText
+
+	private fun lazy_substring(from: Int, length: Int): FlatString is abstract
+
+	private fun lazy_substring_from(from: Int): FlatString is abstract
+end
+
 redef class FlatBuffer
 
 	# Same as to_s, only will not copy self before returning a String.
-	private fun lazy_to_s: FlatString
+	private fun lazy_to_s(len: Int): FlatString
 	do
-		return new FlatString.with_infos(items, length, 0, length - 1)
+		return new FlatString.with_infos(items, len, 0, length - 1)
 	end
 
 	redef fun append(o)
 	do
 		if o isa RopeString then
 			for i in o.substrings do
-				self.append(o)
+				self.append(i)
 			end
 		else
 			super
 		end
+	end
+
+	redef fun lazy_substring(from,length)
+	do
+		return new FlatString.with_infos(items, length, from, from + length - 1)
+	end
+
+	redef fun lazy_substring_from(from)
+	do
+		var newlen = length - from
+		return new FlatString.with_infos(items, newlen, from, from + newlen - 1)
 	end
 
 end
@@ -102,7 +120,7 @@ private class Concat
 			var b = new FlatBuffer.with_capacity(left.length + right.length)
 			b.append(left.to_leaf.str)
 			b.append(right.to_leaf.str)
-			return new StringLeaf(b.lazy_to_s)
+			return new StringLeaf(b.lazy_to_s(b.length))
 		end
 	end
 end
@@ -413,7 +431,7 @@ class RopeString
 			var b = new FlatBuffer.with_capacity(buf_len)
 			b.append(s)
 			b.append(path.leaf.str)
-			if finlen == buf_len then return new StringLeaf(b.lazy_to_s)
+			if finlen == buf_len then return new StringLeaf(b.lazy_to_s(finlen))
 			return new BufferLeaf(b)
 		end
 		var rht = path.leaf
@@ -446,16 +464,23 @@ class RopeString
 			var finlen = leaf.length + s.length
 			var buf = leaf.str.as(FlatBuffer)
 			var cap = buf.capacity
+			# Meaning the buffer was modified elsewhere
+			# Therefore, we create a new one
+			if leaf.length != buf.length then
+				var b = new FlatBuffer.with_capacity(buf_len)
+				b.append(buf.lazy_to_s(leaf.length))
+				buf = b
+			end
 			if finlen <= cap then
 				buf.append(s)
-				if finlen == buf_len then return new StringLeaf(buf.lazy_to_s)
+				if finlen == buf_len then return new StringLeaf(buf.lazy_to_s(finlen))
 				return new BufferLeaf(buf)
 			else
 				var l_len = finlen - cap
 				buf.append(s.substring(0,l_len))
 				var b2 = new FlatBuffer.with_capacity(buf_len)
 				b2.append(s.substring_from(l_len))
-				var left_leaf = new StringLeaf(buf.lazy_to_s)
+				var left_leaf = new StringLeaf(buf.lazy_to_s(buf.length))
 				var right_leaf = new BufferLeaf(b2)
 				var cct = new Concat(left_leaf, right_leaf)
 				return cct
@@ -480,12 +505,12 @@ class RopeString
 		var s: FlatString
 		if lf isa BufferLeaf then
 			var b = lf.str.as(FlatBuffer)
-			s = b.lazy_to_s
+			s = b.lazy_to_s(lf.length)
 		else
 			s = lf.str.as(FlatString)
 		end
-		var l_str = s.substring(0, path.offset)
-		var r_str = s.substring_from(path.offset)
+		var l_str = s.lazy_substring(0, path.offset)
+		var r_str = s.lazy_substring_from(path.offset)
 		if s.length + str.length < buf_len then
 			var buf = new FlatBuffer.with_capacity(buf_len)
 			buf.append(l_str)
@@ -537,7 +562,7 @@ class RopeString
 		if lf isa StringLeaf then
 			s = lf.str.as(FlatString)
 		else
-			s = lf.str.as(FlatBuffer).lazy_to_s
+			s = lf.str.as(FlatBuffer).lazy_to_s(lf.length)
 		end
 
 		if path.leaf.str.length - offset > len then
@@ -570,7 +595,7 @@ class RopeString
 		if lf isa StringLeaf then
 			s = lf.str.as(FlatString)
 		else
-			s = lf.str.as(FlatBuffer).lazy_to_s
+			s = lf.str.as(FlatBuffer).lazy_to_s(lf.length)
 		end
 
 		nod = new StringLeaf(s.substring(0, offset+1).as(FlatString))
@@ -613,6 +638,10 @@ redef class FlatString
 		ret += s
 		return ret + r
 	end
+
+	redef fun lazy_substring(from, len) do return substring(from,len).as(FlatString)
+
+	redef fun lazy_substring_from(from) do return substring_from(from).as(FlatString)
 
 end
 
@@ -796,7 +825,7 @@ class SubstringsIterator
 		if nodes.index < pos then
 			min = pos - nodes.index
 		end
-		substring = substring.substring(min, length)
+		substring = s.lazy_substring(min, length)
 	end
 
 	redef fun is_ok do return nodes.is_ok
@@ -987,8 +1016,10 @@ private class ReverseSubstringsIterator
 
 	fun make_substring
 	do
-		if pos >= (leaves.index + str.length - 1) then return
-		str = str.substring(0, (pos - leaves.index + 1))
+		var l = leaves.item
+		var s = l.str
+		if pos > (leaves.index + l.length - 1) then return
+		str = s.lazy_substring(0, (pos - leaves.index + 1))
 	end
 
 	redef fun is_ok do return leaves.is_ok
