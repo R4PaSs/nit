@@ -209,6 +209,7 @@ abstract class Text
 	#     assert "abcd".has_substring("bc",2)	     ==  false
 	fun has_substring(str: String, pos: Int): Bool
 	do
+		if str.length > self.length then return false
 		var myiter = self.chars.iterator_from(pos)
 		var itsiter = str.chars.iterator
 		while myiter.is_ok and itsiter.is_ok do
@@ -608,13 +609,11 @@ end
 abstract class String
 	super Text
 
+	init do end
+
 	redef type SELFTYPE: String
 
 	redef fun to_s do return self
-
-	fun append(s: String): SELFTYPE is abstract
-
-	fun prepend(s: String): SELFTYPE is abstract
 
 	fun insert_at(s: String, pos: Int): SELFTYPE is abstract
 end
@@ -943,6 +942,7 @@ private class FlatStringIterator
 		target = tgt
 		target_items = tgt.items
 		curr_pos = pos + target.index_from
+		if pos < 0 then pos = target.index_to
 	end
 
 	redef fun is_ok do return curr_pos <= target.index_to
