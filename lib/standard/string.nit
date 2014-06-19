@@ -1783,13 +1783,13 @@ extern class NativeString `{ char* `}
 		return to_s_with_length(cstring_length)
 	end
 
-	fun to_s_with_length(length: Int): FlatString
+	fun to_s_with_length(length: Int): String
 	do
 		assert length >= 0
 		return new FlatString.with_infos(self, length, 0, length - 1)
 	end
 
-	fun to_s_with_copy: FlatString
+	fun to_s_with_copy: String
 	do
 		var length = cstring_length
 		var new_self = calloc_string(length + 1)
