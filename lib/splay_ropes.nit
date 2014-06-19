@@ -1,8 +1,7 @@
 # Introduces a self-balancing method on Rope, using a Splay Tree
 module splay_ropes
 
-import ::standard
-intrude import ::standard::ropes
+intrude import ropes
 
 redef class Rope
 
@@ -60,18 +59,28 @@ redef class RopeString
 	redef fun insert_at(str, pos)
 	do
 		if str.length == 0 then return self
-		if self.length == 0 then return new RopeString.from(str)
 
 		assert pos >= 0 and pos <= length
+
+		if pos == length then
+			var r = root
+			if r isa BufferLeaf then
+				var b = r.str.as(FlatBuffer)
+				if r.length == b.length and r.length + str.length < b.capacity then
+					b.append(str)
+					return new RopeString.from_root(new BufferLeaf(b))
+				end
+			end
+		end
 
 		var path = node_at(pos)
 
 		var cct: RopeNode
 
-		if path.offset == 0 then
-			cct = build_node_zero_offset(path, str)
-		else if path.offset == path.leaf.length then
+		if path.offset == path.leaf.length then
 			cct = build_node_len_offset(path, str)
+		else if path.offset == 0 then
+			cct = build_node_zero_offset(path, str)
 		else
 			cct = build_node_other(path,str)
 		end
