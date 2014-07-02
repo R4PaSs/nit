@@ -1,7 +1,7 @@
 # Introduces a self-balancing method on Rope, using a Splay Tree
 module splay_ropes
 
-intrude import ropes
+intrude import standard::ropes
 
 redef class Rope
 

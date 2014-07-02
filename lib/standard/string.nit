@@ -62,19 +62,6 @@ abstract class Text
 	# Iterates on the substrings of self if any
 	fun substrings: Iterator[Text] is abstract
 
-	# Concatenates `o` to `self`
-	#
-	#     assert "hello" + "world"  == "helloworld"
-	#     assert "" + "hello" + ""  == "hello"
-	fun +(o: Text): SELFTYPE is abstract
-
-	# Auto-concatenates self `i` times
-	#
-	#     assert "abc" * 4 == "abcabcabcabc"
-	#     assert "abc" * 1 == "abc"
-	#     assert "abc" * 0 == ""
-	fun *(i: Int): SELFTYPE is abstract
-
 	# Is the current Text empty (== "")
 	#
 	#     assert "".is_empty
@@ -616,6 +603,18 @@ abstract class String
 	redef fun to_s do return self
 
 	fun insert_at(s: String, pos: Int): SELFTYPE is abstract
+	# Concatenates `o` to `self`
+	#
+	#     assert "hello" + "world"  == "helloworld"
+	#     assert "" + "hello" + ""  == "hello"
+	fun +(o: Text): SELFTYPE is abstract
+
+	# Auto-concatenates self `i` times
+	#
+	#     assert "abc" * 4 == "abcabcabcabc"
+	#     assert "abc" * 1 == "abc"
+	#     assert "abc" * 0 == ""
+	fun *(i: Int): SELFTYPE is abstract
 end
 
 private class FlatSubstringsIter
@@ -852,6 +851,8 @@ class FlatString
 
 		target_string[total_length] = '\0'
 
+		real_items = target_string
+
 		return target_string.to_s_with_length(total_length)
 	end
 
@@ -875,6 +876,8 @@ class FlatString
 			my_items.copy_to(target_string, my_length, 0, current_last)
 			current_last += my_length
 		end
+
+		real_items = target_string
 
 		return target_string.to_s_with_length(final_length)
 	end
@@ -1013,6 +1016,13 @@ abstract class Buffer
 	#     b.append "world"
 	#     assert b == "helloworld"
 	fun append(s: Text) is abstract
+
+	# `self` is repeated `repeats` times in `self`
+	#
+	#     var b = new FlatBuffer.from("hello")
+	#     b.times(3)
+	#     assert b == "hellohellohello"
+	fun times(repeats: Int) is abstract
 
 	redef fun hash
 	do
@@ -1182,21 +1192,11 @@ class FlatBuffer
 		return new_buf
 	end
 
-	redef fun +(other)
+	redef fun times(repeats)
 	do
-		var new_buf = new FlatBuffer.with_capacity(self.length + other.length)
-		new_buf.append(self)
-		new_buf.append(other)
-		return new_buf
-	end
-
-	redef fun *(repeats)
-	do
-		var new_buf = new FlatBuffer.with_capacity(self.length * repeats)
 		for i in [0..repeats[ do
-			new_buf.append(self)
+			append(self)
 		end
-		return new_buf
 	end
 
 	redef fun to_upper

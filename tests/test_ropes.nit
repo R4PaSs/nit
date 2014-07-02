@@ -64,12 +64,12 @@ print ss
 
 var atb = new Array[String]
 
-var s = new RopeString
-s = s.prepend(".types").as(RopeString)
-s = s.prepend("./examples/hello_world.nit".substring(11,11)).as(RopeString)
-s = s.append(".").as(RopeString)
-s = s.append("1").as(RopeString)
-s = s.append(".o").as(RopeString)
+var s: String = new RopeString
+s = ".types" + s
+s = "./examples/hello_world.nit".substring(11,11) + s
+s += "."
+s += "1"
+s += ".o"
 
 print s
 

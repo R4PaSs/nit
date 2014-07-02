@@ -14,8 +14,8 @@
 # Exposes methods for debugging ropes when needed.
 module ropes_debug
 
-intrude import ::standard::ropes
-import ::standard
+intrude import ropes
+import file
 
 redef class Rope
 	# Writes self as a dot file on the hard drive
@@ -30,7 +30,7 @@ end
 redef class Leaf
 	redef fun to_dot(s): String
 	do
-		s += "n{object_id} [label = \"{str}\" shape = rect\nLength = \"{length}\"];\n"
+		s += "n{object_id} [label = \"{str}\\nlength = {length}\" shape = rect];\n"
 		s += "n{str.object_id} -> n{object_id} [label = \"contains\"];\n"
 		s = str.to_dot(s)
 		return s
@@ -60,14 +60,14 @@ end
 redef class FlatString
 	redef fun to_dot(s: String): String
 	do
-		return s + "n{object_id} [label=\"FlatString\\nindex_from = {index_from}\\nindex_to = {index_to}\\nNativeString = {items.to_s_with_length(items.cstring_length)}\"];\n"
+		return s + "n{object_id} [label=\"FlatString\\nindex_from = {index_from}\\nindex_to = {index_to}\\nitems = {items.to_s_with_length(items.cstring_length)}\"];\n"
 	end
 end
 
 redef class FlatBuffer
 	redef fun to_dot(s: String): String
 	do
-		return s + "n{object_id} [label]"
+		return s + "n{object_id} [label=\"FlatBuffer\\nlength={length}\\nitems={items.to_s_with_length(length)}\\ncapacity={capacity}\"];\n"
 	end
 end
 

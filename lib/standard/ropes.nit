@@ -530,15 +530,6 @@ class RopeString
 		return r_cct
 	end
 
-	# Adds `s` at the beginning of self
-	redef fun prepend(s) do return insert_at(s, 0)
-
-	# Adds `s` at the end of self
-	redef fun append(s)
-	do
-		return insert_at(s, length)
-	end
-
 	# O(log(n))
 	#
 	#     var rope = new RopeString.from("abcd")
@@ -577,6 +568,8 @@ class RopeString
 		end
 
 		var nod: RopeNode = lf
+
+		if lf.length == len then return new RopeString.from_root(lf)
 
 		var lft: nullable RopeNode
 		var rht: nullable RopeNode
@@ -622,20 +615,14 @@ redef class FlatString
 
 	redef fun +(o)
 	do
-		if (self.length + o.length) > cct_threshold then
-			return new RopeString.from(self) + o
-		end
+		if length + o.length > cct_threshold then return new RopeString.from(self) + o
 		return super
 	end
 
-	redef fun append(s) do return (new RopeString.from(self)) + s
-
-	redef fun prepend(s) do return (new RopeString.from(self)).prepend(s)
-
 	redef fun insert_at(s, pos)
 	do
-		if pos == 0 then return prepend(s)
-		if pos == length then return append(s)
+		if pos == 0 then return s + self
+		if pos == length then return self + s
 
 		var l = substring(0,pos)
 		var r = substring_from(pos)
@@ -803,7 +790,7 @@ end
 
 # Uses the leaves and calculates a new substring on each iteration
 class SubstringsIterator
-	super IndexedIterator[Text]
+	super IndexedIterator[String]
 
 	private var nodes: IndexedIterator[Leaf]
 
@@ -811,7 +798,7 @@ class SubstringsIterator
 	var pos: Int
 
 	# Current substring, computed from the current Leaf and indexes
-	var substring: Text
+	var substring: String
 
 	init(tgt: Rope, pos: Int)
 	do
@@ -824,9 +811,10 @@ class SubstringsIterator
 	# Compute the bounds of the current substring and makes the substring
 	private fun make_substring
 	do
-		substring = nodes.item.str
+		var l = nodes.item
+		var s = l.str
 		var min = 0
-		var length = substring.length
+		var length = l.length
 		if nodes.index < pos then
 			min = pos - nodes.index
 		end
@@ -1002,20 +990,19 @@ private class ReverseLeavesIterator
 end
 
 private class ReverseSubstringsIterator
-	super IndexedIterator[Text]
+	super IndexedIterator[String]
 
 	var leaves: ReverseLeavesIterator
 
 	var pos: Int
 
-	var str: Text
+	var str: String
 
 	init(tgt: Rope, from: Int)
 	do
 		leaves = tgt.reverse_leaves(from)
 		pos = from
 		if not leaves.is_ok then return
-		str = leaves.item.str
 		make_substring
 	end
 
@@ -1040,7 +1027,6 @@ private class ReverseSubstringsIterator
 		pos -= str.length
 		leaves.next
 		if not leaves.is_ok then return
-		str = leaves.item.str
 		make_substring
 	end
 end
@@ -1085,14 +1071,11 @@ private class ReverseRopeCharIterator
 end
 
 # Returns a Leaf containing "" only
-private fun empty_leaf: Leaf do return once new Leaf("".as(FlatString))
+private fun empty_leaf: Leaf do return once new StringLeaf("".as(FlatString))
 
 # Threshold after which a concatenation will produce a Rope instead of a Flat
-private fun cct_threshold: Int do return 50
-
-# Threshold below which an addition to a Leaf of the Rope will produce a concatenation of Flats
-private fun leaf_threshold: Int do return 30
+private fun cct_threshold: Int do return 160
 
 # Standard length of a Leaf's buffer
-private fun buf_len: Int do return 150
+private fun buf_len: Int do return 200
 

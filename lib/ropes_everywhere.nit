@@ -10,12 +10,11 @@
 
 # Use Ropes instead of Flats for every operation on a String when this module is imported
 #
-# May (read will) induce a significant slowdown when imported.
+# May induce a significant slowdown when imported.
 #
 module ropes_everywhere
 
-intrude import ::standard::string
-import ::standard
+import standard::ropes
 
 redef class Array[E]
 
@@ -77,7 +76,9 @@ redef class Map[K,V]
 		var i = iterator
 		var k = i.key
 		var e = i.item
-		s += "{k}{couple_sep}{e or else "<null>"}"
+		s += k.to_s
+		s += couple_sep
+		if e != null then s += e.to_s else s+= "<null>"
 
 		# Concat other items
 		i.next
@@ -85,30 +86,41 @@ redef class Map[K,V]
 			s += sep
 			k = i.key
 			e = i.item
-			s += "{k}{couple_sep}{e or else "<null>"}"
+			s += k.to_s
+			s += couple_sep
+			if e != null then s += e.to_s else s += "<null>"
 			i.next
 		end
 		return s
 	end
 end
 
-redef class NativeString
+redef class FlatString
 
-	redef fun to_s_with_length(length: Int): String
+	redef fun +(o)
 	do
-		assert length >= 0
-		var s = new FlatString.with_infos(self, length, 0, length - 1)
-		return new RopeString.from(s)
-	end
-
-	redef fun to_s_with_copy: String
-	do
-		var length = cstring_length
-		var new_self = calloc_string(length + 1)
-		copy_to(new_self, length, 0, 0)
-		var s = new FlatString.with_infos(new_self, length, 0, length - 1)
-		return new RopeString.from(s)
+		return new RopeString.from(self) + o
 	end
 
 end
+
+#redef class NativeString
+
+#	redef fun to_s_with_length(length: Int): String
+#	do
+#		assert length >= 0
+#		var s = new FlatString.with_infos(self, length, 0, length - 1)
+#		return new RopeString.from(s)
+#	end
+
+#	redef fun to_s_with_copy: String
+#	do
+#		var length = cstring_length
+#		var new_self = calloc_string(length + 1)
+#		copy_to(new_self, length, 0, 0)
+#		var s = new FlatString.with_infos(new_self, length, 0, length - 1)
+#		return new RopeString.from(s)
+#	end
+
+#end
 

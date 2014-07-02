@@ -13,85 +13,72 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+source ./bench_common.sh
 source ./bench_plot.sh
 
 # Default number of times a command must be run with bench_command
 # Can be overrided with 'the option -n'
-count=10
+count=5
 
 echo "Compiling"
 
 ../bin/nitg --global ./strings/concat_bench.nit --make-flags "CFLAGS=\"-g -O2 -DNOBOEHM\""
-../bin/nitg --global ./strings/cct_bench.nit --make-flags "CFLAGS=\"-g -O2 -DNOBOEHM\""
+#../bin/nitg --global ./strings/cct_bench.nit --make-flags "CFLAGS=\"-g -O2 -DNOBOEHM\""
 
-#
-#
-#  $1: title of the command
-#  $2: long desription of the command
-#  rest: the command to execute
-function bench_command()
-{
-	if [ "$dry_run" = "true" ]; then return; fi
-	local title="$1"
-	local desc="$2"
-	shift
-	shift
-	if test "$verbose" = true; then outputopts="/dev/stdout"; else outputopts="/dev/null"; fi
-	timeout="time.out"
-	echo "$title" > "$timeout"
-	echo "# $desc" >> "$timeout"
-	echo "\$ $@" >> "$timeout"
-	echo
-	echo "** [$title] $desc **"
-	echo " $ $@"
-
-	# Execute the commands $count times
-	for i in `seq 1 "$count"`; do
-		(ulimit -t 300; /usr/bin/time -f "%U" -o "$timeout" -a "$@") > $outputopts 2>&1 || die "$1: failed"
-		echo -n "$i. "
-		tail -n 1 "$timeout"
-	done
-
-	line=`compute_stats "$timeout"`
-	echo "$line ($res)"
-	echo $line >> "$res"
-	#rm $timeout
-}
+stop=false
+while [ "$stop" = false ]; do
+	case "$1" in
+		-v) verbose=true; shift;;
+		-h) usage; exit;;
+		-n) count="$2"; shift; shift;;
+		--dry) dry_run=true; shift;;
+		--fast) fast=true; shift;;
+		--html) html="index.html"; echo >"$html" "<html><head></head><body>"; shift;;
+		*) stop=true
+	esac
+done
 
 #echo "*** Benching thresholds ***"
 
-#prepare_res concat_ropes.out concat_ropes ropes
+prepare_res concat_ropes.out concat_ropes ropes
+for i in `seq 1 "$1"`; do
+	echo "String length = $i"
+	bench_command $i ropes$i ./concat_bench rope $i $2 "NIT_GC_CHOOSER=large"
+done
+
+prepare_res concat_flat.out concat_flat flat
+for i in `seq 1 "$1"`; do
+	echo "String length = $i"
+	bench_command $i flat$i ./concat_bench flat $i $2 "NIT_GC_CHOOSER=large"
+done
+
+prepare_res concat_buf.out concat_buf buf_rope
+for i in `seq 1 "$1"`; do
+	echo "String length = $i"
+	bench_command $i buff_rope$i ./concat_bench buffered $i $2 "NIT_GC_CHOOSER=large"
+done
+
+plot concat.gnu
+
+
+#echo "*** Benching general concatenation performance ***"
+
+#prepare_res cct_ropestring.out cct_ropestring cct_ropestring
 #for i in `seq 1 "$1"`; do
 #	echo "String length = $i"
-#	bench_command $i ropes$i ./concat_bench rope $i $2 "NIT_GC_CHOOSER=large"
+#	bench_command $i ropestring$i ./cct_bench rope $i $2 "NIT_GC_CHOOSER=large"
 #done
 
-#prepare_res concat_flat.out concat_flat flat
+#prepare_res cct_flatstring.out cct_flatstring cct_flatstring
 #for i in `seq 1 "$1"`; do
 #	echo "String length = $i"
-#	bench_command $i flat$i ./concat_bench flat $i $2 "NIT_GC_CHOOSER=large"
+#	bench_command $i flatstring$i ./cct_bench flats $i $2 "NIT_GC_CHOOSER=large"
 #done
 
-#plot concat.gnu
+#prepare_res cct_flatbuffer.out cct_flatbuffer cct_flatbuffer
+#for i in `seq 1 "$1"`; do
+#	echo "String length = $i"
+#	bench_command $i flatbuffer$i ./cct_bench flatb $i $2 "NIT_GC_CHOOSER= large"
+#done
 
-echo "*** Benching general concatenation performance ***"
-
-prepare_res cct_flatstring.out cct_flatstring cct_flatstring
-for i in `seq 1 "$1"`; do
-	echo "String length = $i"
-	bench_command $i flatstring$i ./cct_bench flats $i $2 "NIT_GC_CHOOSER=large"
-done
-
-prepare_res cct_ropestring.out cct_ropestring cct_ropestring
-for i in `seq 1 "$1"`; do
-	echo "String length = $i"
-	bench_command $i ropestring$i ./cct_bench rope $i $2 "NIT_GC_CHOOSER=large"
-done
-
-prepare_res cct_flatbuffer.out cct_flatbuffer cct_flatbuffer
-for i in `seq 1 "$1"`; do
-	echo "String length = $i"
-	bench_command $i flatbuffer$i ./cct_bench flatb $i $2 "NIT_GC_CHOOSER= large"
-done
-
-plot cct.gnu
+#plot cct.gnu

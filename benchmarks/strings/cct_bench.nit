@@ -1,7 +1,9 @@
 module cct_bench
 
 import standard
+import splay_ropes
 intrude import standard::string
+intrude import standard::ropes
 
 redef class FlatString
 
@@ -48,6 +50,7 @@ fun bench_cct_flatbuffer(size: Int, cnt: Int) do
 	for i in [0..cnt] do
 		st.append(cct_str)
 	end
+	st.to_s
 end
 
 if args[0] == "rope" then

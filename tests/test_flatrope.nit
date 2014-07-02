@@ -16,7 +16,7 @@ var st = "quick brown fox over the lazy dog"
 
 print st
 
-var pr = st.prepend("The ")
+var pr = "The " + st
 
 print pr
 
@@ -24,8 +24,8 @@ pr = st.insert_at(" jumps", 15)
 
 print pr
 
-pr = st.append(".")
+pr = st + "."
 
 print pr
 
-print st.insert_at(" jumps", 15). prepend("The ").append(".")
+print "The " + st.insert_at(" jumps", 15) + "."
