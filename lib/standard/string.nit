@@ -936,24 +936,34 @@ class FlatString
 	do
 		assert i >= 0
 
-		var my_length = self.length
+		var mylen = self.bytelen
 
-		var final_length = my_length * i
+		var finlen = mylen * i
 
 		var my_items = self.items
 
-		var target_string = calloc_string((final_length) + 1)
+		var my_real_len = length
 
-		target_string[final_length] = '\0'
+		var my_real_fin_len = my_real_len * i
+
+		var target_string = calloc_string((finlen) + 1)
+
+		var my_index = index
+
+		var new_index = new NativeNitString(my_real_fin_len)
+
+		target_string[finlen] = '\0'
 
 		var current_last = 0
+		var curr_index = 0
 
 		for iteration in [1 .. i] do
-			my_items.copy_to(target_string, my_length, 0, current_last)
-			current_last += my_length
+			my_items.copy_to(target_string, mylen, index_from, current_last)
+			my_index.copy_to(new_index, length, 0, curr_index)
+			current_last += mylen
 		end
 
-		return target_string.to_s_with_length(final_length)
+		return new FlatString.with_infos_index(target_string, my_real_fin_len, 0, my_real_fin_len -1, new_index, finlen)
 	end
 
 	redef fun hash
