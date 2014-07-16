@@ -17,10 +17,76 @@ module string
 import math
 intrude import collection # FIXME should be collection::array
 
-`{
+in "C Header" `{
+
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include "nit.common.h"
+
+typedef struct {
+	long pos;
+	char* ns;
+} UTF8Char;
+
 `}
+
+# UTF-8 char as defined in RFC-3629, e.g. 1-4 Bytes
+#
+# A UTF-8 char has its bytes stored in a NativeString (char*)
+extern class UnicodeChar `{ UTF8Char* `}
+
+	new(pos: Int, ns: NativeString) `{
+		UTF8Char* u = nit_alloc(sizeof(UTF8Char));
+		u->pos = pos;
+		u->ns = ns;
+		return u;
+	`}
+
+	# Real length of the char in UTF8
+	#
+	# As per the specification :
+	#
+	#  Length  |        UTF-8 octet sequence
+	#          |              (binary)
+	# ---------+-------------------------------------------------
+	#  1       | 0xxxxxxx
+	#  2       | 110xxxxx 10xxxxxx
+	#  3       | 1110xxxx 10xxxxxx 10xxxxxx
+	#  4       | 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+	fun len: Int `{
+		char* ns = recv->ns;
+		int pos = recv->pos;
+		char nspos = ns[pos];
+		if((nspos & 0x80) == 0x00){ return 1;}
+		if((nspos & 0xE0) == 0xC0){ return 2;}
+		if((nspos & 0xF0) == 0xE0){ return 3;}
+		if((nspos & 0xF7) == 0xF0){ return 4;}
+		// Invalid character
+		return 1;
+	`}
+
+	# Position in containing NativeString
+	fun pos: Int `{
+		return recv->pos;
+	`}
+
+	fun pos=(p: Int) `{recv->pos = p;`}
+
+	# C char* wrapping the char
+	fun ns: NativeString `{
+		return recv->ns;
+	`}
+
+	redef fun to_s import NativeString.to_s_with_length `{
+		int len = string___UnicodeChar_len___impl(recv);
+		char* r = nit_alloc(len + 1);
+		r[len] = '\0';
+		char* src = (recv->ns + recv->pos);
+		memcpy(r, src, len);
+		return NativeString_to_s_with_length(r, len);
+	`}
+end
 
 ###############################################################################
 # String                                                                      #
@@ -640,10 +706,15 @@ class FlatString
 	# Index in _items of the start of the string
 	private var index_from: Int
 
-	# Indes in _items of the last item of the string
+	# Index in _items of the last item of the string
 	private var index_to: Int
 
+	# Length in bytes of the string (excluding an eventual final \0)
+	private var bytelen: Int
+
 	redef var chars: SequenceRead[Char] = new FlatStringCharView(self)
+
+	var index: NativeNitString
 
 	################################################
 	#       AbstractString specific methods        #
@@ -676,13 +747,13 @@ class FlatString
 
 		var realFrom = index_from + from
 
-		if (realFrom + count) > index_to then return new FlatString.with_infos(items, index_to - realFrom + 1, realFrom, index_to)
+		if (realFrom + count) > index_to then return new FlatString.with_infos(items, index_to - realFrom + 1, realFrom, index_to, index_to - realFrom + 1)
 
 		if count == 0 then return empty
 
 		var to = realFrom + count - 1
 
-		return new FlatString.with_infos(items, to - realFrom + 1, realFrom, to)
+		return new FlatString.with_infos(items, to - realFrom + 1, realFrom, to, to - realFrom + 1)
 	end
 
 	redef fun empty do return "".as(FlatString)
@@ -741,25 +812,34 @@ class FlatString
 	#              String Specific Methods           #
 	##################################################
 
-	private init with_infos(items: NativeString, len: Int, from: Int, to: Int)
+	private init with_infos(items: NativeString, len: Int, from: Int, to: Int, bytelen: Int)
 	do
 		self.items = items
 		length = len
+		self.index = new NativeNitString(len)
 		index_from = from
 		index_to = to
+		self.bytelen = bytelen
+	end
+
+	private init with_infos_index(items: NativeString, len: Int, from: Int, to: Int, index: NativeNitString, bytelen: Int)
+	do
+		self.items = items
+		length = len
+		self.index = index
+		index_from = from
+		index_to = to
+		self.bytelen = bytelen
 	end
 
 	redef fun to_cstring: NativeString
 	do
 		if real_items != null then return real_items.as(not null)
-		if index_from > 0 or index_to != items.cstring_length - 1 then
-			var newItems = calloc_string(length + 1)
-			self.items.copy_to(newItems, length, index_from, 0)
-			newItems[length] = '\0'
-			self.real_items = newItems
-			return newItems
-		end
-		return items
+		var new_items = calloc_string(bytelen + 1)
+		self.items.copy_to(new_items, bytelen, index[index_from].pos, 0)
+		new_items[bytelen] = '\0'
+		self.real_items = new_items
+		return new_items
 	end
 
 	redef fun ==(other)
@@ -849,7 +929,7 @@ class FlatString
 
 		target_string[total_length] = '\0'
 
-		return target_string.to_s_with_length(total_length)
+		return new FlatString.with_infos(target_string, total_length, 0, total_length -1, total_length)
 	end
 
 	redef fun *(i)
@@ -1053,6 +1133,40 @@ abstract class Buffer
 	redef fun chars: Sequence[Char] is abstract
 end
 
+class CPIter
+	super Iterator[UnicodeChar]
+
+	var index: NativeNitString
+
+	var bytes: NativeString
+
+	var tgt: FlatString
+
+	var pos: Int
+
+	var max: Int
+
+	init(str: FlatString)
+	do
+		tgt = str
+		bytes = tgt.items
+		index = tgt.index
+		pos = 0
+		max = str.length
+	end
+
+	redef fun item do
+		assert is_ok
+		return index[pos]
+	end
+
+	redef fun next do
+		pos += 1
+	end
+
+	redef fun is_ok do return pos <= max
+end
+
 # Mutable strings of characters.
 class FlatBuffer
 	super FlatText
@@ -1215,7 +1329,7 @@ class FlatBuffer
 
 	redef fun times(repeats)
 	do
-		var x = new FlatString.with_infos(items, length, 0, length - 1)
+		var x = new FlatString.with_infos(items, length, 0, length - 1, length * repeats)
 		for i in [1..repeats[ do
 			append(x)
 		end
@@ -1254,6 +1368,7 @@ private class FlatBufferReverseIterator
 	init with_pos(tgt: FlatBuffer, pos: Int)
 	do
 		target = tgt
+		target_items = tgt.items
 		if tgt.length > 0 then target_items = tgt.items
 		curr_pos = pos
 	end
@@ -1401,15 +1516,15 @@ redef class Int
 
 	# Fill `s` with the digits in base `base` of `self` (and with the '-' sign if 'signed' and negative).
 	# assume < to_c max const of char
-	private fun fill_buffer(s: Buffer, base: Int, signed: Bool)
+	private fun fill_buffer(s: FlatBuffer, base: Int, signed: Bool)
 	do
 		var n: Int
 		# Sign
 		if self < 0 then
 			n = - self
-			s.chars[0] = '-'
+			s.items[0] = '-'
 		else if self == 0 then
-			s.chars[0] = '0'
+			s.items[0] = '0'
 			return
 		else
 			n = self
@@ -1417,7 +1532,7 @@ redef class Int
 		# Fill digits
 		var pos = digit_count(base) - 1
 		while pos >= 0 and n > 0 do
-			s.chars[pos] = (n % base).to_c
+			s.items[pos] = (n % base).to_c
 			n = n / base # /
 			pos -= 1
 		end
@@ -1537,7 +1652,7 @@ redef class Char
 	redef fun to_s
 	do
 		var s = new FlatBuffer.with_capacity(1)
-		s.chars[0] = self
+		s.items[0] = self
 		return s.to_s
 	end
 
@@ -1674,6 +1789,21 @@ class NativeString
 	fun []=(index: Int, item: Char) is intern
 	fun copy_to(dest: NativeString, length: Int, from: Int, to: Int) is intern
 
+	fun make_index(length: Int, real_len: Container[Int]): NativeNitString import Container[Int].item= `{
+		int pos = 0;
+		int index_pos = 0;
+		UTF8Char* index = nit_alloc(length*sizeof(UTF8Char));
+		while(pos < length){
+			UTF8Char* curr = &index[index_pos];
+			curr->pos = pos;
+			curr->ns = recv;
+			pos += string___UnicodeChar_len___impl(curr);
+			index_pos ++;
+		}
+		Container_of_Int_item__assign(real_len, index_pos);
+		return index;
+	`}
+
 	# Position of the first nul character.
 	fun cstring_length: Int
 	do
@@ -1681,28 +1811,42 @@ class NativeString
 		while self[l] != '\0' do l += 1
 		return l
 	end
+
 	fun atoi: Int is intern
 	fun atof: Float is extern "atof"
 
-	redef fun to_s
+	redef fun to_s: FlatString
 	do
-		return to_s_with_length(cstring_length)
+		var len = cstring_length
+		return to_s_with_length(len)
 	end
 
-	fun to_s_with_length(length: Int): FlatString
+	fun to_s_with_length(len: Int): FlatString
 	do
-		assert length >= 0
-		return new FlatString.with_infos(self, length, 0, length - 1)
+		var real_len = new Container[Int](0)
+		var x = make_index(len, real_len)
+		return new FlatString.with_infos_index(self, real_len.item, 0, real_len.item - 1, x, len)
 	end
 
 	fun to_s_with_copy: FlatString
 	do
+		var real_len = new Container[Int](0)
 		var length = cstring_length
+		var x = make_index(length, real_len)
 		var new_self = calloc_string(length + 1)
 		copy_to(new_self, length, 0, 0)
-		return new FlatString.with_infos(new_self, length, 0, length - 1)
+		return new FlatString.with_infos_index(new_self, real_len.item, 0, real_len.item - 1, x, length)
 	end
 
+end
+
+# A native nit string is an array of NitChar objects stored as a raw C Array
+extern class NativeNitString `{ UTF8Char* `}
+
+	new(size: Int) `{ return nit_alloc(size*sizeof(UTF8Char)); `}
+
+	fun []=(index: Int, item: UnicodeChar) `{ recv[index] = *item; `}
+	fun [](id: Int): UnicodeChar `{ return &recv[id]; `}
 end
 
 # StringCapable objects can create native strings
