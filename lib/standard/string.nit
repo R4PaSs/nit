@@ -1847,6 +1847,13 @@ extern class NativeNitString `{ UTF8Char* `}
 
 	fun []=(index: Int, item: UnicodeChar) `{ recv[index] = *item; `}
 	fun [](id: Int): UnicodeChar `{ return &recv[id]; `}
+
+	# Copies a part of self starting at index `my_from` of length `length` into `other`, starting at `its_from`
+	fun copy_to(other: NativeNitString, my_from: Int, its_from: Int, length: Int)`{
+		UTF8Char* myfrom = recv + my_from*(sizeof(UTF8Char));
+		UTF8Char* itsfrom = other + its_from*(sizeof(UTF8Char));
+		memcpy(itsfrom, myfrom, length);
+	`}
 end
 
 # StringCapable objects can create native strings
