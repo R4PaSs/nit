@@ -783,15 +783,16 @@ class FlatString
 			from = 0
 		end
 
-		var realFrom = index_from + from
-
-		if (realFrom + count) > index_to then return new FlatString.with_infos(items, index_to - realFrom + 1, realFrom, index_to, index_to - realFrom + 1)
-
 		if count == 0 then return empty
 
-		var to = realFrom + count - 1
+		var real_from = index_from + from
+		var real_to = real_from + count - 1
 
-		return new FlatString.with_infos(items, to - realFrom + 1, realFrom, to, to - realFrom + 1)
+		if real_to > index_to then real_to = index_to
+
+		var sub_bytelen = (index[real_to].pos - index[from].pos) + index[from].len
+
+		return new FlatString.with_infos_index(items, count, real_from, real_to, index, sub_bytelen)
 	end
 
 	redef fun empty do return "".as(FlatString)
