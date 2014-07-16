@@ -755,17 +755,22 @@ class FlatString
 
 	redef fun reversed
 	do
-		var native = calloc_string(self.length + 1)
+		var native = calloc_string(self.bytelen + 1)
 		var length = self.length
-		var items = self.items
+		var index = self.index
 		var pos = 0
-		var ipos = length-1
-		while pos < length do
-			native[pos] = items[ipos]
-			pos += 1
-			ipos -= 1
+		var i = 0
+		var ipos = bytelen
+		# TODO Build index for new string, use FlatString constructor instead of NS
+		while i < length do
+			var uchar = index[i]
+			var uchar_len = uchar.len
+			ipos -= uchar_len
+			items.copy_to(native, uchar_len, pos, ipos)
+			pos += uchar_len
+			i += 1
 		end
-		return native.to_s_with_length(self.length)
+		return native.to_s_with_length(self.bytelen)
 	end
 
 	redef fun substring(from, count)
