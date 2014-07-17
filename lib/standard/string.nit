@@ -804,6 +804,8 @@ class FlatString
 
 	redef var chars: SequenceRead[Char] = new FlatStringCharView(self)
 
+	var unichars: SequenceRead[UnicodeChar] = new FlatStringUnicharView(self)
+
 	var index: NativeNitString
 
 	################################################
@@ -1243,7 +1245,7 @@ abstract class Buffer
 	redef fun chars: Sequence[Char] is abstract
 end
 
-class CPFlatStringView
+class FlatStringUnicharView
 	super SequenceRead[UnicodeChar]
 
 	var tgt: FlatString
@@ -1251,22 +1253,22 @@ class CPFlatStringView
 	redef fun [](i)
 	do
 		assert i >= 0 and i < length
-		var c = tgt.index[i]
+		var c = tgt.index[i + tgt.index_from]
 		return c
 	end
 
 	redef fun length do return tgt.length
 
+	redef fun iterator do return new CPIter(tgt)
+
+	redef fun reverse_iterator do return new RevCPIterator(tgt)
+
 end
 
 class CPIter
-	super Iterator[UnicodeChar]
+	super IndexedIterator[UnicodeChar]
 
-	var index: NativeNitString
-
-	var bytes: NativeString
-
-	var tgt: FlatString
+	var ind: NativeNitString
 
 	var pos: Int
 
@@ -1274,23 +1276,51 @@ class CPIter
 
 	init(str: FlatString)
 	do
-		tgt = str
-		bytes = tgt.items
-		index = tgt.index
-		pos = 0
-		max = str.length
+		ind = str.index
+		pos = str.index_from
+		max = str.index_to
 	end
 
 	redef fun item do
 		assert is_ok
-		return index[pos]
+		return ind[pos]
 	end
+
+	redef fun index do return pos
 
 	redef fun next do
 		pos += 1
 	end
 
 	redef fun is_ok do return pos <= max
+end
+
+class RevCPIterator
+	super IndexedIterator[UnicodeChar]
+
+	var ind: NativeNitString
+
+	var pos: Int
+
+	var min: Int
+
+	init(str: FlatString)
+	do
+		pos = str.index_to
+		min = str.index_from
+		ind = str.index
+	end
+
+	redef fun item do
+		assert is_ok
+		return ind[pos]
+	end
+
+	redef fun index do return pos
+
+	redef fun next do pos -= 1
+
+	redef fun is_ok do return pos >= min
 end
 
 # Mutable strings of characters.
