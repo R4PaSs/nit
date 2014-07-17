@@ -102,7 +102,11 @@ class OFStream
 	do
 		assert _writable
 		if s isa FlatText then
-			write_native(s.to_cstring, s.length)
+			if s isa FlatString then 
+				write_native(s.to_cstring, s.bytelen)
+			else
+				write_native(s.to_cstring, s.length)
+			end
 		else
 			for i in s.substrings do write_native(i.to_cstring, i.length)
 		end
