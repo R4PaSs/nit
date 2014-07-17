@@ -833,42 +833,46 @@ class FlatString
 
 	redef fun to_upper
 	do
-		var outstr = calloc_string(self.length + 1)
+		var outstr = calloc_string(self.bytelen + 1)
+
 		var out_index = 0
+		var index = self.index
+		var ipos = 0
+		var max = length
+		var items = self.items
 
-		var myitems = self.items
-		var index_from = self.index_from
-		var max = self.index_to
-
-		while index_from <= max do
-			outstr[out_index] = myitems[index_from].to_upper
-			out_index += 1
-			index_from += 1
+		while ipos < max do
+			var u = index[ipos].to_upper
+			u.ns.copy_to(outstr, u.len, u.pos, out_index)
+			out_index += u.len
+			ipos += 1
 		end
 
-		outstr[self.length] = '\0'
+		outstr[self.bytelen] = '\0'
 
-		return outstr.to_s_with_length(self.length)
+		return outstr.to_s_with_length(self.bytelen)
 	end
 
 	redef fun to_lower
 	do
-		var outstr = calloc_string(self.length + 1)
+		var outstr = calloc_string(self.bytelen + 1)
+
 		var out_index = 0
+		var index = self.index
+		var ipos = 0
+		var max = length
+		var items = self.items
 
-		var myitems = self.items
-		var index_from = self.index_from
-		var max = self.index_to
-
-		while index_from <= max do
-			outstr[out_index] = myitems[index_from].to_lower
-			out_index += 1
-			index_from += 1
+		while ipos < max do
+			var u = index[ipos].to_lower
+			u.ns.copy_to(outstr, u.len, u.pos, out_index)
+			out_index += u.len
+			ipos += 1
 		end
 
-		outstr[self.length] = '\0'
+		outstr[self.bytelen] = '\0'
 
-		return outstr.to_s_with_length(self.length)
+		return outstr.to_s_with_length(self.bytelen)
 	end
 
 	redef fun output
