@@ -142,6 +142,23 @@ extern class UnicodeChar `{ UTF8Char* `}
 		return ret;
 	`}
 
+	redef fun output `{
+		switch(string___UnicodeChar_len___impl(recv)){
+			case 1:
+				printf("%c", recv->ns[recv->pos]);
+				break;
+			case 2:
+				printf("%c%c", recv->ns[recv->pos], recv->ns[recv->pos + 1]);
+				break;
+			case 3:
+				printf("%c%c%c", recv->ns[recv->pos], recv->ns[recv->pos + 1], recv->ns[recv->pos + 2]);
+				break;
+			case 4:
+				printf("%c%c%c%c", recv->ns[recv->pos], recv->ns[recv->pos + 1], recv->ns[recv->pos + 2], recv->ns[recv->pos + 3]);
+				break;
+		}
+	`}
+
 	redef fun ==(o)
 	do
 		if o isa Char then
@@ -880,7 +897,7 @@ class FlatString
 		var i = self.index_from
 		var imax = self.index_to
 		while i <= imax do
-			items[i].output
+			index[i].output
 			i += 1
 		end
 	end
