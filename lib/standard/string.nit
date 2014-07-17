@@ -81,6 +81,12 @@ extern class UnicodeChar `{ UTF8Char* `}
 	# Returns the Unicode code point representing the character
 	#
 	# Note : A unicode character might not be a visible glyph, but it will be used to determine canonical equivalence
+	#
+	#     var s = "aàハð"
+	#     assert s[0].code_point == 65
+	#     assert s[1].code_point == 224
+	#     assert s[2].code_point == 12495
+	#     assert s[3].code_point == 66374
 	fun code_point: Int `{
 		switch(string___UnicodeChar_len___impl(recv)){
 			case 1:
