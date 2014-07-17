@@ -9,18 +9,23 @@
 # another product.
 
 import standard
-import utf8
 intrude import standard::string
 
-var str = "ハaローa世界A, a日本A語aです".as(FlatString)
+var s = "aàハ𐍆".as(FlatString)
+assert s.index[0].code_point == 97
+assert s.index[1].code_point == 224
+assert s.index[2].code_point == 12495
+assert s.index[3].code_point == 66374
+
+var str = "ハaロЖー𐍃a世界 ᓀ . ᓂ A,𐍆 a日本A語aです".as(FlatString)
 
 print str.length
 
 print str.reversed
 
-for i in [0..str.length[ do
-	print str.index[i].code_point.to_hex
-end
+for i in str.unichars do print i
+
+for i in str.unichars.reverse_iterator do print i
 
 str.output
 
