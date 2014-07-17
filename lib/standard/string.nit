@@ -1237,6 +1237,22 @@ abstract class Buffer
 	redef fun chars: Sequence[Char] is abstract
 end
 
+class CPFlatStringView
+	super SequenceRead[UnicodeChar]
+
+	var tgt: FlatString
+
+	redef fun [](i)
+	do
+		assert i >= 0 and i < length
+		var c = tgt.index[i]
+		return c
+	end
+
+	redef fun length do return tgt.length
+
+end
+
 class CPIter
 	super Iterator[UnicodeChar]
 
