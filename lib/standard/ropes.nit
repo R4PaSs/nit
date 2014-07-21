@@ -17,6 +17,22 @@ module ropes
 
 intrude import string
 
+in "C header" `{
+
+#include "nit.common.h"
+#include "string._nitni.h"
+
+typedef struct node node;
+struct node {
+	// FlatString or FlatBuffer depending on the situation
+	String* item;
+	int length;
+	node* left;
+	node* right;
+};
+
+`}
+
 # Used when searching for a particular node
 # Returns the path to the node from the root of the rope
 # Also, the node and the offset for seeked position in the rope
@@ -41,32 +57,39 @@ private class PathElement
 end
 
 # A node for a Rope
-private abstract class RopeNode
+private extern class RopeNode `{ node* `}
 	# Length of the node
-	var length = 0
+	fun length: Int `{ return recv->length;`}
 
 	# Transforms the current node to a Leaf.
 	# This might be costly to invoke since this produces a FlatString concatenation.
 	# Can be used internally to limit the growth of the Rope when working with small leaves.
 	fun to_leaf: Leaf is abstract
+
+	fun is_leaf: Bool `{ return recv->item != NULL;`}
+	fun is_concat: Bool do return not is_leaf
 end
 
 # Node that represents a concatenation between two nodes (of any RopeNode type)
-private class Concat
+private extern class Concat `{ node* `}
 	super RopeNode
 
 	# Left child of the node
-	var left: nullable RopeNode
+	fun left: RopeNode `{ return recv->left; `}
 	# Right child of the node
-	var right: nullable RopeNode
+	fun right: RopeNode `{ return recv->right; `}
 
-	init(l: nullable RopeNode, r: nullable RopeNode)
-	do
-		left = l
-		right = r
-		if l != null then length += l.length
-		if r != null then length += r.length
-	end
+	new(l: RopeNode, r: RopeNode)
+	`{
+		node* s = nit_alloc(sizeof(node));
+		s->length = 0;
+		s->item = NULL;
+		s->left = l;
+		s->right = r;
+		if (l != NULL) { s->length += l->length;}
+		if (r != NULL) { s->length += r->length;}
+		return s;
+	`}
 
 	redef fun to_leaf
 	do
@@ -80,21 +103,26 @@ private class Concat
 end
 
 # Leaf of a Rope, contains a FlatString
-private abstract class Leaf
+private extern class Leaf `{ node* `}
 	super RopeNode
 
 	# Encapsulated FlatString in the leaf node
-	var str: FlatText
-
+	fun str: FlatText is abstract
 end
 
-private class StringLeaf
+private extern class StringLeaf `{ node* `}
 	super Leaf
 
-	init(val: FlatString) do
-		self.str = val
-		length = str.length
-	end
+	new (val: FlatString) import FlatString.length `{
+		node* r = nit_alloc(sizeof(node));
+		r->item = (FlatString)val;
+		r->left = NULL;
+		r->right = NULL;
+		r->length = FlatString_length(val);
+		return r;
+	`}
+
+	redef fun str: FlatString `{ return (FlatString)recv->item; `}
 
 	redef fun to_leaf do return self
 end
