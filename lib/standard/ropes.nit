@@ -270,19 +270,31 @@ abstract class Rope
 	end
 
 	# Special case for when the required pos is length
-	private fun stack_to_end(nod: RopeNode, st: List[PathElement])
-	do
-		if nod isa Leaf then return
-		var n = nod.as(Concat)
-		var r = n.right
-		var ele = new PathElement(n)
-		ele.right = true
-		st.push(ele)
-		if r != null then
-			stack_to_end(r, st)
-		end
-		return
-	end
+	private fun stack_to_end(nod: RopeNode, st: Path) import Rope.stack_to_end, String.length `{
+		if(nod->item != NULL){
+			st->leaf = nod;
+			st->offset = String_length(nod->item);
+			return;
+		}
+		node* r = nod->right;
+		path_element* ele = st->tail;
+		if(ele == NULL) {
+			ele = ropes___new_PathElement___impl();
+			ele->cct = nod;
+			ele->right = 1;
+			st->head = ele;
+			st->tail = ele;
+		} else {
+			path_element* new_tail = ropes___new_PathElement___impl();
+			ele->next = new_tail;
+			new_tail->prev = ele;
+			st->tail = new_tail;
+			new_tail->cct = nod;
+			new_tail->right = 1;
+		}
+		if(r == NULL){return;}
+		ropes___Rope_stack_to_end___impl(recv, r, st);
+	`}
 
 	# Builds the path to Leaf at position `seek_pos`
 	private fun get_node_from(node: RopeNode, curr_pos: Int, seek_pos: Int, stack: List[PathElement]): Path
