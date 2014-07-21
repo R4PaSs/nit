@@ -23,6 +23,9 @@ in "C header" `{
 #include "string._nitni.h"
 
 typedef struct node node;
+typedef struct path path;
+typedef struct path_element path_element;
+
 struct node {
 	// FlatString or FlatBuffer depending on the situation
 	String* item;
@@ -31,29 +34,61 @@ struct node {
 	node* right;
 };
 
+struct path {
+	node* leaf;
+	int offset;
+	path_element* head;
+	path_element* tail;
+};
+
+struct path_element {
+	path_element* prev;
+	path_element* next;
+	node* cct;
+	int left;
+	int right;
+};
+
 `}
 
 # Used when searching for a particular node
 # Returns the path to the node from the root of the rope
 # Also, the node and the offset for seeked position in the rope
-private class Path
-	# Leaf found
-	var leaf: Leaf
-	# Offset in leaf
-	var offset: Int
-	# Stack of the nodes traversed, and the path used
-	var stack: List[PathElement]
+private extern class Path `{ path* `}
+
+	new (lf: Leaf, off: Int, head: PathElement, tail: PathElement)
+	`{
+		path* p = nit_alloc(sizeof(path));
+		p->leaf = lf;
+		p->offset = off;
+		p->head = head;
+		p->tail = tail;
+		return p;
+	`}
+
+	fun leaf: Leaf `{ return recv->leaf; `}
+	fun offset: Int `{ return recv->offset; `}
+	fun stack: PathElement `{ return recv->head; `}
 end
 
 # An element for a Path, has the concat node and whether or not
 # left or right child was visited.
-private class PathElement
-	# Visited node
-	var node: Concat
-	# Was the left child visited ?
-	var left = false
-	# Was the right child visited ?
-	var right = false
+private extern class PathElement `{ path_element* `}
+
+	new `{
+		path_element* e = nit_alloc(sizeof(path_element));
+		e->left = 0;
+		e->right = 0;
+		return e;
+	`}
+
+	fun node: Concat `{ return recv->cct; `}
+	fun left: Bool `{ return recv->left; `}
+	fun left=(v: Bool) `{ recv->left = v; `}
+	fun right: Bool `{ return recv->right; `}
+	fun right=(v: Bool) `{ recv->right = v; `}
+	fun next: PathElement `{ return recv->next; `}
+	fun prev: PathElement `{ return recv->prev; `}
 end
 
 # A node for a Rope
