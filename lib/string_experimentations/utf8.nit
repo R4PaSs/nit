@@ -258,6 +258,50 @@ redef class FlatString
 
 	end
 
+	redef fun to_upper
+	do
+		var outstr = calloc_string(self.bytelen + 1)
+
+		var out_index = 0
+		var index = self.index
+		var ipos = 0
+		var max = length
+		var items = self.items
+
+		while ipos < max do
+			var u = index[ipos].to_upper
+			u.ns.copy_to(outstr, u.len, u.pos, out_index)
+			out_index += u.len
+			ipos += 1
+		end
+
+		outstr[self.bytelen] = '\0'
+
+		return outstr.to_s_with_length(self.bytelen)
+	end
+
+	redef fun to_lower
+	do
+		var outstr = calloc_string(self.bytelen + 1)
+
+		var out_index = 0
+		var index = self.index
+		var ipos = 0
+		var max = length
+		var items = self.items
+
+		while ipos < max do
+			var u = index[ipos].to_lower
+			u.ns.copy_to(outstr, u.len, u.pos, out_index)
+			out_index += u.len
+			ipos += 1
+		end
+
+		outstr[self.bytelen] = '\0'
+
+		return outstr.to_s_with_length(self.bytelen)
+	end
+
 end
 
 redef class NativeString
