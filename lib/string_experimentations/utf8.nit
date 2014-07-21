@@ -302,6 +302,16 @@ redef class FlatString
 		return outstr.to_s_with_length(self.bytelen)
 	end
 
+	redef fun output
+	do
+		var i = self.index_from
+		var imax = self.index_to
+		while i <= imax do
+			index[i].output
+			i += 1
+		end
+	end
+
 end
 
 redef class NativeString
