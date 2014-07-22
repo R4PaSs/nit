@@ -28,7 +28,7 @@ typedef struct path_element path_element;
 
 struct node {
 	// FlatString or FlatBuffer depending on the situation
-	String* item;
+	String item;
 	int length;
 	node* left;
 	node* right;
@@ -150,7 +150,7 @@ private extern class StringLeaf `{ node* `}
 
 	new (val: FlatString) import FlatString.length `{
 		node* r = nit_alloc(sizeof(node));
-		r->item = (FlatString)val;
+		r->item = val;
 		r->left = NULL;
 		r->right = NULL;
 		r->length = FlatString_length(val);
