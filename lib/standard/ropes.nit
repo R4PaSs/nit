@@ -296,10 +296,12 @@ abstract class Rope
 		path_element* last = new_PathElement();
 		last->cct = node;
 		path_element* old_last = path->tail;
-		old_last->next = last;
-		last->prev = old_last;
+		if(old_last != NULL){
+			old_last->next = last;
+			last->prev = old_last;
+		}
 		path->tail = last;
-		if(node->left == NULL){
+		if(node->left != NULL){
 			long nxt = curr_pos + node->left->length;
 			if(nxt > seek_pos){
 				last->left = 1;
