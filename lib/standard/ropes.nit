@@ -247,27 +247,21 @@ abstract class Rope
 	end
 
 	# Path to the Leaf for `position`
-	private fun node_at(position: Int): Path
-	do
-		assert position >= 0 and position <= length
-		if position == length then
-			var st = new List[PathElement]
-			stack_to_end(root,st)
-			if not st.is_empty then
-				var lst = st.last
-				var lf = lst.node.right
-				if lf != null then
-					return new Path(lf.as(Leaf), lf.length, st)
-				else
-					lf = lst.node.left
-					return new Path(lf.as(Leaf), lf.length, st)
-				end
-			else
-				return new Path(root.as(Leaf), length, st)
-			end
-		end
-		return get_node_from(root, 0, position, new List[PathElement])
-	end
+	#
+	# Can return a null Path if position was out of bounds.
+	private fun node_at(position: Int): Path import Rope.length, Rope.root, Rope.stack_to_end, Rope.get_node_from `{
+		long ropelen = Rope_length(recv);
+		if(position < 0 || position > ropelen){return NULL;}
+		path* p = nit_alloc(sizeof(path));
+		p->head = NULL;
+		p->tail = NULL;
+		if(position == ropelen){
+			Rope_stack_to_end(recv, Rope_root(recv), p);
+		} else {
+			Rope_get_node_from(recv, Rope_root(recv), 0, position, p);
+		}
+		return p;
+	`}
 
 	# Special case for when the required pos is length
 	private fun stack_to_end(nod: RopeNode, st: Path) import Rope.stack_to_end, String.length `{
