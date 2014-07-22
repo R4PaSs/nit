@@ -479,6 +479,13 @@ class RopeString
 
 		return ret
 	end
+
+	private fun generate_node_for_string(str: String): RopeNode
+	do
+		if str isa FlatString then return new StringLeaf(str)
+		return str.as(RopeString).root
+	end
+
 end
 
 redef class FlatString
