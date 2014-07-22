@@ -264,7 +264,7 @@ abstract class Rope
 	`}
 
 	# Special case for when the required pos is length
-	private fun stack_to_end(nod: RopeNode, st: Path) import Rope.stack_to_end, String.length `{
+	private fun stack_to_end(nod: RopeNode, st: Path) import Rope.stack_to_end, String.length, PathElement `{
 		if(nod->item != NULL){
 			st->leaf = nod;
 			st->offset = String_length(nod->item);
@@ -273,13 +273,13 @@ abstract class Rope
 		node* r = nod->right;
 		path_element* ele = st->tail;
 		if(ele == NULL) {
-			ele = ropes___new_PathElement___impl();
+			ele = new_PathElement();
 			ele->cct = nod;
 			ele->right = 1;
 			st->head = ele;
 			st->tail = ele;
 		} else {
-			path_element* new_tail = ropes___new_PathElement___impl();
+			path_element* new_tail = new_PathElement();
 			ele->next = new_tail;
 			new_tail->prev = ele;
 			st->tail = new_tail;
@@ -287,7 +287,7 @@ abstract class Rope
 			new_tail->right = 1;
 		}
 		if(r == NULL){return;}
-		ropes___Rope_stack_to_end___impl(recv, r, st);
+		Rope_stack_to_end(recv, r, st);
 	`}
 
 	# Builds the path to Leaf at position `seek_pos`
