@@ -272,7 +272,6 @@ abstract class Rope
 			ele = new_PathElement();
 			ele->cct = nod;
 			ele->right = 1;
-			st->head = ele;
 			st->tail = ele;
 		} else {
 			path_element* new_tail = new_PathElement();
