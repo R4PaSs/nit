@@ -25,6 +25,7 @@ in "C header" `{
 typedef struct node node;
 typedef struct path path;
 typedef struct path_element path_element;
+typedef struct iter_element iter_element;
 
 struct node {
 	// FlatString or FlatBuffer depending on the situation
@@ -48,6 +49,15 @@ struct path_element {
 	int right;
 };
 
+struct iter_element {
+	node* item;
+	int left;
+	int right;
+	int done;
+	iter_element* next;
+	iter_element* prev;
+};
+
 `}
 
 # Used when searching for a particular node
@@ -66,6 +76,7 @@ private extern class Path `{ path* `}
 
 	fun leaf: Leaf `{ return recv->leaf; `}
 	fun offset: Int `{ return recv->offset; `}
+	fun tail: PathElement `{ return recv->tail; `}
 end
 
 # An element for a Path, has the concat node and whether or not
@@ -542,25 +553,42 @@ private class RopeStringChars
 end
 
 # Used to iterate on a Rope
-private class IteratorElement
+private extern class IteratorElement `{ iterator_element* `}
 
-	init(e: RopeNode)
-	do
-		if e isa Leaf then
-			left = true
-			right = true
-		end
-		node = e
-	end
+	new(e: RopeNode)
+	`{
+		if(recv->item){
+			recv->left = 1;
+			recv->right = 1;
+		} else {
+			recv->left = 0;
+			recv->right = 0;
+		}
+		recv->item = e;
+	`}
 
 	# The node being visited
-	var node: RopeNode
+	fun node: RopeNode `{ return recv->item; `}
 	# If the node has a left child, was it visited ?
-	var left = false
+	fun left: Bool `{ return recv->left; `}
+
+	fun left=(l: Bool) `{ recv->left = l; `}
 	# If the node has a right child, was it visited ?
-	var right = false
+	fun right: Bool `{ return recv->right; `}
+
+	fun right=(r: Bool) `{ recv->right - r;`}
 	# Was the current node visited ?
-	var done = false
+	fun done: Bool `{ return recv->done; `}
+
+	fun done=(v: Bool) `{ recv->done = v; `}
+	# Pointer to the previous element
+	fun prev `{ return recv->prev; `}
+
+	fun prev=(o: IteratorElement) `{ recv->prev = o; `}
+	# Pointer to the next element
+	fun next `{ return recv->next; `}
+
+	fun next=(o: IteratorElement) `{ recv->next = o; `}
 end
 
 # Simple Postfix iterator on the nodes of a Rope
