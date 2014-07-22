@@ -297,28 +297,32 @@ abstract class Rope
 	`}
 
 	# Builds the path to Leaf at position `seek_pos`
-	private fun get_node_from(node: RopeNode, curr_pos: Int, seek_pos: Int, stack: List[PathElement]): Path
-	do
-		assert curr_pos >= 0
-		if node isa Leaf then return new Path(node, seek_pos - curr_pos, stack)
-		node = node.as(Concat)
-
-		if node.left != null then
-			var next_pos = curr_pos + node.left.length
-			stack.add(new PathElement(node))
-			if next_pos > seek_pos then
-				stack.last.left = true
-				return get_node_from(node.left.as(not null), curr_pos, seek_pos, stack)
-			end
-			stack.last.right = true
-			return get_node_from(node.right.as(not null), next_pos, seek_pos, stack)
-		else
-			var vis = new PathElement(node)
-			vis.right = true
-			stack.add(vis)
-			return get_node_from(node.right.as(not null), curr_pos, seek_pos, stack)
-		end
-	end
+	private fun get_node_from(node: RopeNode, curr_pos: Int, seek_pos: Int, path: Path) import PathElement, Rope.get_node_from `{
+		if(curr_pos < 0){return;}
+		if(node->item != NULL){
+			path->leaf = node;
+			path->offset = seek_pos - curr_pos;
+			return;
+		}
+		path_element* last = new_PathElement();
+		last->cct = node;
+		path_element* old_last = path->tail;
+		old_last->next = last;
+		last->prev = old_last;
+		path->tail = last;
+		if(node->left == NULL){
+			long nxt = curr_pos + node->left->length;
+			if(nxt > seek_pos){
+				last->left = 1;
+				Rope_get_node_from(recv, node->left, curr_pos, seek_pos, path);
+			} else {
+				last->right = 1;
+				Rope_get_node_from(recv, node->right, nxt, seek_pos, path);
+			}
+		} else {
+			Rope_get_node_from(recv, node->right, curr_pos, seek_pos, path);
+		}
+	`}
 
 	redef fun ==(o)
 	do
