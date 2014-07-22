@@ -250,7 +250,6 @@ abstract class Rope
 		long ropelen = Rope_length(recv);
 		if(position < 0 || position > ropelen){return NULL;}
 		path* p = nit_alloc(sizeof(path));
-		p->head = NULL;
 		p->tail = NULL;
 		if(position == ropelen){
 			Rope_stack_to_end(recv, Rope_root(recv), p);
