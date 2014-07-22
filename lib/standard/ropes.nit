@@ -37,7 +37,6 @@ struct node {
 struct path {
 	node* leaf;
 	int offset;
-	path_element* head;
 	path_element* tail;
 };
 
@@ -56,19 +55,17 @@ struct path_element {
 # Also, the node and the offset for seeked position in the rope
 private extern class Path `{ path* `}
 
-	new (lf: Leaf, off: Int, head: PathElement, tail: PathElement)
+	new (lf: Leaf, off: Int, tail: PathElement)
 	`{
 		path* p = nit_alloc(sizeof(path));
 		p->leaf = lf;
 		p->offset = off;
-		p->head = head;
 		p->tail = tail;
 		return p;
 	`}
 
 	fun leaf: Leaf `{ return recv->leaf; `}
 	fun offset: Int `{ return recv->offset; `}
-	fun stack: PathElement `{ return recv->head; `}
 end
 
 # An element for a Path, has the concat node and whether or not
