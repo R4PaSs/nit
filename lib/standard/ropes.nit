@@ -433,48 +433,61 @@ class RopeString
 	#     assert rope.substring(1, 0)         ==  ""
 	#     assert rope.substring(2, 5)         ==  "cd"
 	#
-	redef fun substring(pos, len)
-	do
-		if pos < 0 then
-			len += pos
-			pos = 0
-		end
+	redef fun substring(pos, len) import Rope.length, RopeString.empty, Path, Rope.node_at, StringLeaf, String.substring, String.substring_from, Rope.root= `{
+		long mylen = Rope_length(recv);
 
-		if pos + len > length then len = length - pos
+		if(pos < 0){
+			len += pos;
+			pos = 0;
+		}
 
-		if len <= 0 then return new RopeString.from("")
+		path* p = Rope_node_at(recv, pos);
 
-		var path = node_at(pos)
+		node* lf = p->leaf;
+		long off = p->offset;
 
-		var lf = path.leaf
-		var offset = path.offset
+		if((pos + len) > mylen) { len = mylen - pos; }
 
-		if path.leaf.str.length - offset > len then lf = new StringLeaf(lf.str.substring(offset,len).as(FlatString)) else lf = new StringLeaf(lf.str.substring_from(offset).as(FlatString))
+		if(len <= 0) { return RopeString_empty(recv); }
 
-		var nod: RopeNode = lf
+		if((lf->length - off) > len){
+			lf = new_StringLeaf(String_substring(lf->item, off, len));
+		} else {
+			lf = new_StringLeaf(String_substring_from(lf->item, off));
+		}
 
-		for i in path.stack.reverse_iterator do
-			if i.right then continue
-			nod = new Concat(nod, i.node.right)
-		end
+		path_element* pe = p->tail;
 
-		var ret = new RopeString
-		ret.root = nod
+		while(pe != NULL){
+			if(pe->right){
+				pe = pe->prev;
+				continue;
+			}
+			lf = new_Concat(lf, pe->cct->right);
+			pe = pe->prev;
+		}
 
-		path = ret.node_at(len-1)
+		RopeString ret = new_RopeString_from_root(lf);
 
-		offset = path.offset
-		nod = new StringLeaf(path.leaf.str.substring(0, offset+1).as(FlatString))
+		p = Rope_node_at(ret, len-1);
 
-		for i in path.stack.reverse_iterator do
-			if i.left then continue
-			nod = new Concat(i.node.left, nod)
-		end
+		off = p->offset;
+		lf = new_StringLeaf(String_substring(p->leaf->item, 0, off+1));
 
-		ret.root = nod
+		pe = p->tail;
+		while(pe != NULL){
+			if(pe->left){
+				pe = pe->prev;
+				continue;
+			}
+			lf = new_Concat(pe->cct->left, lf);
+			pe = pe->prev;
+		}
 
-		return ret
-	end
+		Rope_root__assign(ret, lf);
+
+		return ret;
+	`}
 
 	private fun generate_node_for_string(str: String): RopeNode
 	do
