@@ -381,53 +381,52 @@ class RopeString
 	end
 
 	# Inserts a String `str` at position `pos`
-	redef fun insert_at(str, pos)
-	do
-		if str.length == 0 then return self
-		if self.length == 0 then return new RopeString.from(str)
+	redef fun insert_at(str, pos) import String.length, Rope.length, RopeString.from_root, StringLeaf, Rope.node_at, RopeString.generate_node_for_string, Concat, String.substring, String.substring_from `{
+		long mylen = Rope_length(recv);
+		long strlen = String_length(str);
+		if(strlen == 0){ return recv; }
+		if(mylen == 0){
+			node* root = new_StringLeaf(str);
+			return new_RopeString_from_root(root);
+		}
+		if(pos < 0 || pos > mylen) {
+			printf("Assert fail.");
+			exit(-1);
+		}
+		path* p = Rope_node_at(recv, pos);
+		node* st_node = RopeString_generate_node_for_string(recv, str);
+		node* cct;
+		if(p->offset == 0){
+			cct = new_Concat(st_node, p->leaf);
+		} else if (p->offset == p->leaf->length) {
+			cct = new_Concat(p->leaf, st_node);
+		} else {
+			long midstr = strlen - p->offset;
+			String l = String_substring(l, 0, midstr);
+			String r = String_substring_from(r, midstr);
+			node* ll = new_StringLeaf(l);
+			node* rr = new_StringLeaf(r);
+			node* inter_cct = new_Concat(ll, st_node);
+			cct = new_Concat(inter_cct, rr);
+		}
 
-		assert pos >= 0 and pos <= length
+		path_element* lst = p->tail;
+		while(lst != NULL){
+			if(lst->left){
+				cct = new_Concat(cct, lst->cct->right);
+			}else if(lst->right){
+				cct = new_Concat(lst->cct->left, cct);
+			}else{
+				// Should not happen, but in this case, let's just leave.
+				printf("Path badly set\n");
+				exit(-1);
+			}
+			lst = lst->prev;
+		}
 
-		var path = node_at(pos)
+		return new_RopeString_from_root(cct);
+	`}
 
-		var last_concat: Concat
-
-		if path.offset == 0 then
-			if str isa FlatString then
-				last_concat = new Concat(new StringLeaf(str), path.leaf)
-			else
-				last_concat = new Concat(str.as(RopeString).root, path.leaf)
-			end
-		else if path.offset == path.leaf.length then
-			if str isa FlatString then
-				last_concat = new Concat(path.leaf, new StringLeaf(str))
-			else
-				last_concat = new Concat(path.leaf, str.as(RopeString).root)
-			end
-		else
-			var s = path.leaf.str
-			var l_half = s.substring(0, s.length - path.offset)
-			var r_half = s.substring_from(s.length - path.offset)
-			var cct: Concat
-			var ll = new StringLeaf(l_half.as(FlatString))
-			if str isa FlatString then
-				cct = new Concat(ll, new StringLeaf(str))
-			else
-				cct = new Concat(ll, str.as(RopeString).root)
-			end
-			last_concat = new Concat(cct, new StringLeaf(r_half.as(FlatString)))
-		end
-
-		for i in path.stack.reverse_iterator do
-			if i.left then
-				last_concat = new Concat(last_concat, i.node.right)
-			else
-				last_concat = new Concat(i.node.left, last_concat)
-			end
-		end
-
-		return new RopeString.from_root(last_concat)
-	end
 
 	# O(log(n))
 	#
