@@ -87,7 +87,7 @@ private class Concat
 		var off = 0
 		for i in substrings do
 			var ilen = i.length
-			i.as(FlatString).items.copy_to(ns, ilen, i.as(FlatString).index_from, off)
+			i.as(FlatString).items.copy_to(ns, ilen, 0, off)
 			off += ilen
 		end
 		return ns
@@ -289,7 +289,13 @@ class RopeBuffer
 		var rp = rpos
 		if s isa Rope or slen > maxlen then
 			if rp > 0 and dumped != rp then
-				str += new FlatString.with_infos(ns, rp - dumped, dumped, rp - 1)
+				var nnslen = rp - dumped
+				var nns = new NativeString(nnslen)
+				ns.copy_to(nns, nnslen, dumped, 0)
+				var nstr = new FlatString
+				nstr.items = nns
+				nstr.length = nnslen
+				str += nstr
 				dumped = rp
 			end
 			str = str + s
@@ -298,10 +304,7 @@ class RopeBuffer
 		var remsp = buf_size - rp
 		var sits: NativeString
 		var begin: Int
-		if s isa FlatString then
-			begin = s.index_from
-			sits = s.items
-		else if s isa FlatBuffer then
+		if s isa FlatText then
 			begin = 0
 			sits = s.items
 		else
@@ -360,7 +363,12 @@ class RopeBuffer
 	# the final String and re-allocates a new larger Buffer.
 	private fun dump_buffer do
 		written = false
-		var nstr = new FlatString.with_infos(ns, rpos - dumped, dumped, rpos - 1)
+		var nnslen = rpos - dumped
+		var nns = new NativeString(nnslen)
+		ns.copy_to(nns, nnslen, dumped, 0)
+		var nstr = new FlatString
+		nstr.items = nns
+		nstr.length = nnslen
 		str += nstr
 		var bs = buf_size
 		bs = bs * 2
@@ -371,7 +379,13 @@ class RopeBuffer
 
 	redef fun output do
 		str.output
-		new FlatString.with_infos(ns, rpos - dumped, dumped, rpos - 1).output
+		var nnslen = rpos - dumped
+		var nns = new NativeString(nnslen)
+		ns.copy_to(nns, nnslen, dumped, 0)
+		var str = new FlatString
+		str.length = nnslen
+		str.items = nns
+		str.output
 	end
 
 	# Enlarge is useless here since the `Buffer`
@@ -387,14 +401,19 @@ class RopeBuffer
 	redef fun to_s do
 		written = true
 		var nnslen = rpos - dumped
+		var nns = new NativeString(nnslen)
 		if nnslen == 0 then return str
-		return str + new FlatString.with_infos(ns, rpos - dumped, dumped, rpos - 1)
+		ns.copy_to(nns, nnslen, dumped, 0)
+		return str + nns.to_s_with_length(nnslen)
 	end
 
 	redef fun reverse do
 		# Flush the buffer in order to only have to reverse `str`.
 		if rpos > 0 and dumped != rpos then
-			str += new FlatString.with_infos(ns, rpos - dumped, dumped, rpos - 1)
+			var nnslen = rpos - dumped
+			var nns = new NativeString(nnslen)
+			ns.copy_to(nns, nnslen, dumped, 0)
+			str += nns.to_s_with_length(nnslen)
 			dumped = rpos
 		end
 		str = str.reversed
@@ -437,12 +456,10 @@ redef class FlatString
 		if s isa FlatString then
 			if nlen > maxlen then return new Concat(self, s)
 			var mits = items
-			var sifrom = s.index_from
-			var mifrom = index_from
 			var sits = s.items
 			var ns = new NativeString(nlen + 1)
-			mits.copy_to(ns, mlen, mifrom, 0)
-			sits.copy_to(ns, slen, sifrom, mlen)
+			mits.copy_to(ns, mlen, 0, 0)
+			sits.copy_to(ns, slen, 0, mlen)
 			return ns.to_s_with_length(nlen)
 		else if s isa Concat then
 			var sl = s.left
@@ -661,7 +678,10 @@ private class RopeBufSubstringIterator
 
 	init(str: RopeBuffer) is old_style_init do
 		iter = str.str.substrings
-		nsstr = new FlatString.with_infos(str.ns, str.rpos - str.dumped, str.dumped, str.rpos - 1)
+		var nnslen = str.rpos - str.dumped
+		var nns = new NativeString(nnslen)
+		str.ns.copy_to(nns, nnslen, str.dumped, 0)
+		nsstr = nns.to_s_with_length(nnslen)
 		if str.length == 0 then nsstr_done = true
 	end
 

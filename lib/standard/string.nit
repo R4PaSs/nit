@@ -1046,26 +1046,15 @@ class FlatString
 	super FlatText
 	super String
 
-	# Index in _items of the start of the string
-	private var index_from: Int is noinit
-
-	# Indes in _items of the last item of the string
-	private var index_to: Int is noinit
-
 	redef var chars: SequenceRead[Char] = new FlatStringCharView(self)
 
 	redef fun [](index)
 	do
 		# Check that the index (+ index_from) is not larger than indexTo
 		# In other terms, if the index is valid
-		assert index >= 0
-		assert (index + index_from) <= index_to
-		return items[index + index_from]
+		assert index >= 0 and index < length
+		return items[index]
 	end
-
-	################################################
-	#       AbstractString specific methods        #
-	################################################
 
 	redef fun reversed
 	do
@@ -1092,91 +1081,60 @@ class FlatString
 			from = 0
 		end
 
-		var realFrom = index_from + from
+		if count + from > length then count = length - from
 
-		if (realFrom + count) > index_to then return new FlatString.with_infos(items, index_to - realFrom + 1, realFrom, index_to)
+		if count <= 0 then return empty
 
-		if count == 0 then return empty
-
-		var to = realFrom + count - 1
-
-		return new FlatString.with_infos(items, to - realFrom + 1, realFrom, to)
+		var nns = new NativeString(count + 1)
+		items.copy_to(nns, count, from, 0)
+		nns[count] = '\0'
+		return nns.to_s_with_length(count)
 	end
 
 	redef fun empty do return "".as(FlatString)
 
 	redef fun to_upper
 	do
-		var outstr = new NativeString(self.length + 1)
-		var out_index = 0
+		var outstr = new NativeString(length + 1)
 
-		var myitems = self.items
-		var index_from = self.index_from
-		var max = self.index_to
+		var myitems = items
 
-		while index_from <= max do
-			outstr[out_index] = myitems[index_from].to_upper
-			out_index += 1
-			index_from += 1
+		for i in [0 .. length[ do
+			outstr[i] = myitems[i].to_upper
 		end
 
-		outstr[self.length] = '\0'
+		outstr[length] = '\0'
 
-		return outstr.to_s_with_length(self.length)
+		return outstr.to_s_with_length(length)
 	end
 
 	redef fun to_lower
 	do
-		var outstr = new NativeString(self.length + 1)
-		var out_index = 0
+		var outstr = new NativeString(length + 1)
 
-		var myitems = self.items
-		var index_from = self.index_from
-		var max = self.index_to
+		var myitems = items
 
-		while index_from <= max do
-			outstr[out_index] = myitems[index_from].to_lower
-			out_index += 1
-			index_from += 1
+		for i in [0 .. length[ do
+			outstr[i] = myitems[i].to_lower
 		end
 
-		outstr[self.length] = '\0'
+		outstr[length] = '\0'
 
-		return outstr.to_s_with_length(self.length)
+		return outstr.to_s_with_length(length)
 	end
 
-	redef fun output
-	do
-		var i = self.index_from
-		var imax = self.index_to
-		while i <= imax do
-			items[i].output
-			i += 1
-		end
-	end
-
-	##################################################
-	#              String Specific Methods           #
-	##################################################
-
-	private init with_infos(items: NativeString, len: Int, from: Int, to: Int)
-	do
-		self.items = items
-		length = len
-		index_from = from
-		index_to = to
-	end
+	redef fun output do for i in [0 .. length[ do items[i].output
 
 	redef fun to_cstring: NativeString
 	do
 		if real_items != null then
 			return real_items.as(not null)
 		else
-			var newItems = new NativeString(length + 1)
-			self.items.copy_to(newItems, length, index_from, 0)
-			newItems[length] = '\0'
-			self.real_items = newItems
-			return newItems
+			var new_items = new NativeString(length + 1)
+			items.copy_to(new_items, length, 0, 0)
+			new_items[length] = '\0'
+			real_items = new_items
+			return new_items
 		end
 	end
 
@@ -1184,25 +1142,14 @@ class FlatString
 	do
 		if not other isa FlatString then return super
 
-		if self.object_id == other.object_id then return true
+		if object_id == other.object_id then return true
 
-		var my_length = length
-
-		if other.length != my_length then return false
-
-		var my_index = index_from
-		var its_index = other.index_from
-
-		var last_iteration = my_index + my_length
+		if other.length != length then return false
 
 		var itsitems = other.items
-		var myitems = self.items
+		var myitems = items
 
-		while my_index < last_iteration do
-			if myitems[my_index] != itsitems[its_index] then return false
-			my_index += 1
-			its_index += 1
-		end
+		for i in [0 .. length[ do if myitems[i] != itsitems[i] then return false
 
 		return true
 	end
@@ -1216,28 +1163,22 @@ class FlatString
 		var my_curr_char : Char
 		var its_curr_char : Char
 
-		var curr_id_self = self.index_from
-		var curr_id_other = other.index_from
-
 		var my_items = self.items
 		var its_items = other.items
 
 		var my_length = self.length
 		var its_length = other.length
 
-		var max_iterations = curr_id_self + my_length
+		var max = if my_length < its_length then my_length else its_length
 
-		while curr_id_self < max_iterations do
-			my_curr_char = my_items[curr_id_self]
-			its_curr_char = its_items[curr_id_other]
+		for i in [0 .. max] do
+			my_curr_char = my_items[i]
+			its_curr_char = its_items[i]
 
 			if my_curr_char != its_curr_char then
 				if my_curr_char < its_curr_char then return true
 				return false
 			end
-
-			curr_id_self += 1
-			curr_id_other += 1
 		end
 
 		return my_length < its_length
@@ -1252,14 +1193,12 @@ class FlatString
 
 		var target_string = new NativeString(my_length + its_length + 1)
 
-		self.items.copy_to(target_string, my_length, index_from, 0)
-		if s isa FlatString then
-			s.items.copy_to(target_string, its_length, s.index_from, my_length)
-		else if s isa FlatBuffer then
+		self.items.copy_to(target_string, my_length, 0, 0)
+		if s isa FlatText then
 			s.items.copy_to(target_string, its_length, 0, my_length)
 		else
 			var curr_pos = my_length
-			for i in [0..s.length[ do
+			for i in [0 .. s.length[ do
 				var c = s.chars[i]
 				target_string[curr_pos] = c
 				curr_pos += 1
@@ -1300,11 +1239,10 @@ class FlatString
 		if hash_cache == null then
 			# djb2 hash algorithm
 			var h = 5381
-			var i = index_from
 
 			var myitems = items
 
-			while i <= index_to do
+			for i in [0 .. length[ do
 				h = h.lshift(5) + h + myitems[i].ascii
 				i += 1
 			end
@@ -1321,52 +1259,49 @@ end
 private class FlatStringReverseIterator
 	super IndexedIterator[Char]
 
-	var target: FlatString
-
 	var target_items: NativeString
 
 	var curr_pos: Int
 
 	init with_pos(tgt: FlatString, pos: Int)
 	do
-		target = tgt
 		target_items = tgt.items
-		curr_pos = pos + tgt.index_from
+		curr_pos = pos
 	end
 
-	redef fun is_ok do return curr_pos >= target.index_from
+	redef fun is_ok do return curr_pos >= 0
 
 	redef fun item do return target_items[curr_pos]
 
 	redef fun next do curr_pos -= 1
 
-	redef fun index do return curr_pos - target.index_from
+	redef fun index do return curr_pos
 
 end
 
 private class FlatStringIterator
 	super IndexedIterator[Char]
 
-	var target: FlatString
-
 	var target_items: NativeString
 
 	var curr_pos: Int
 
+	var max: Int
+
 	init with_pos(tgt: FlatString, pos: Int)
 	do
-		target = tgt
 		target_items = tgt.items
-		curr_pos = pos + target.index_from
+		curr_pos = pos
+		max = tgt.length
 	end
 
-	redef fun is_ok do return curr_pos <= target.index_to
+	redef fun is_ok do return curr_pos < max
 
 	redef fun item do return target_items[curr_pos]
 
 	redef fun next do curr_pos += 1
 
-	redef fun index do return curr_pos - target.index_from
+	redef fun index do return curr_pos
 
 end
 
@@ -1381,8 +1316,8 @@ private class FlatStringCharView
 		# In other terms, if the index is valid
 		assert index >= 0
 		var target = self.target
-		assert (index + target.index_from) <= target.index_to
-		return target.items[index + target.index_from]
+		assert index < target.length
+		return target.items[index]
 	end
 
 	redef fun iterator_from(start) do return new FlatStringIterator.with_pos(target, start)
@@ -1590,7 +1525,7 @@ class FlatBuffer
 	do
 		written = true
 		if length == 0 then items = new NativeString(1)
-		return new FlatString.with_infos(items, length, 0, length - 1)
+		return items.to_s_with_length(length)
 	end
 
 	redef fun to_cstring
@@ -1614,9 +1549,7 @@ class FlatBuffer
 		capacity = s.length + 1
 		length = s.length
 		items = new NativeString(capacity)
-		if s isa FlatString then
-			s.items.copy_to(items, length, s.index_from, 0)
-		else if s isa FlatBuffer then
+		if s isa FlatText then
 			s.items.copy_to(items, length, 0, 0)
 		else
 			var curr_pos = 0
@@ -1644,9 +1577,7 @@ class FlatBuffer
 		is_dirty = true
 		var sl = s.length
 		if capacity < length + sl then enlarge(length + sl)
-		if s isa FlatString then
-			s.items.copy_to(items, sl, s.index_from, length)
-		else if s isa FlatBuffer then
+		if s isa FlatText then
 			s.items.copy_to(items, sl, 0, length)
 		else
 			var curr_pos = self.length
@@ -1704,10 +1635,8 @@ class FlatBuffer
 
 	redef fun times(repeats)
 	do
-		var x = new FlatString.with_infos(items, length, 0, length - 1)
-		for i in [1..repeats[ do
-			append(x)
-		end
+		var x = items.to_s_with_length(length)
+		for i in [1..repeats[ do append(x)
 	end
 
 	redef fun upper
@@ -2139,13 +2068,13 @@ redef class Array[E]
 			var tmp = na[i]
 			var tpl = tmp.length
 			if tmp isa FlatString then
-				tmp.items.copy_to(ns, tpl, tmp.index_from, off)
+				tmp.items.copy_to(ns, tpl, 0, off)
 				off += tpl
 			else
 				for j in tmp.substrings do
 					var s = j.as(FlatString)
 					var slen = s.length
-					s.items.copy_to(ns, slen, s.index_from, off)
+					s.items.copy_to(ns, slen, 0, off)
 					off += slen
 				end
 			end
@@ -2230,7 +2159,9 @@ extern class NativeString `{ char* `}
 	fun to_s_with_length(length: Int): FlatString
 	do
 		assert length >= 0
-		var str = new FlatString.with_infos(self, length, 0, length - 1)
+		var str = new FlatString
+		str.items = self
+		str.length = length
 		return str
 	end
 
@@ -2240,7 +2171,9 @@ extern class NativeString `{ char* `}
 		var length = cstring_length
 		var new_self = new NativeString(length + 1)
 		copy_to(new_self, length, 0, 0)
-		var str = new FlatString.with_infos(new_self, length, 0, length - 1)
+		var str = new FlatString
+		str.items = new_self
+		str.length = length
 		new_self[length] = '\0'
 		str.real_items = new_self
 		return str
