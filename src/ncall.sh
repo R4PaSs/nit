@@ -21,11 +21,11 @@ set -x
 set -e
 make -C ../c_src
 sh git-gen-version.sh
-time ../c_src/nitg nitc.nit -v -o nitc_0
-time ./nitc_0 nitc.nit -v "$@" -o nitc_2
+time ../c_src/nitg nitc.nit -v -o nitc_0 -m ../lib/string_experimentations/cst_substring.nit
+time ./nitc_0 nitc.nit -v "$@" -o nitc_2 -m ../lib/string_experimentations/cst_substring.nit
 cp nitc_2 nitc
-time ./nitc_2 nitc.nit -v "$@" -o nitc_3
-time ./nitc_3 nitc.nit -v "$@" -o nitc_4
+time ./nitc_2 nitc.nit -v "$@" -o nitc_3 -m ../lib/string_experimentations/cst_substring.nit
+time ./nitc_3 nitc.nit -v "$@" -o nitc_4 -m ../lib/string_experimentations/cst_substring.nit
 ./nitc_4 ../examples/hello_world.nit "$@" -o hello_world
 ./hello_world
 

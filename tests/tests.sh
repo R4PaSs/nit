@@ -385,7 +385,7 @@ case $engine in
 	nitc|nitg)
 		engine=nitg-s;
 		enginebinname=nitc;
-		OPT="--separate $OPT --compile-dir $compdir"
+		OPT="--separate $OPT --compile-dir $compdir -m ../lib/string_experimentations/cst_substring.nit"
 		savdirs="sav/nitg-common/"
 		;;
 	nitcs|nitg-s)
