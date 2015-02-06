@@ -141,7 +141,7 @@ for drawing in drawings do
 	# Inkscape doesn't give us this information
 	var page_width = -1
 	var page_height = -1
-	var svg_file = new IFStream.open(drawing)
+	var svg_file = new FileReader.open(drawing)
 	while not svg_file.eof do
 		var line = svg_file.read_line
 
@@ -240,7 +240,7 @@ for drawing in drawings do
 	end
 
 	# Output source file
-	var src_file = new OFStream.open("{src_path}/{drawing_name}.nit")
+	var src_file = new FileWriter.open("{src_path}/{drawing_name}.nit")
 	nit_src.write_to(src_file)
 	src_file.close
 

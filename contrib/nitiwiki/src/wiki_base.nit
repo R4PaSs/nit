@@ -540,7 +540,7 @@ class WikiArticle
 	# REQUIRE: `has_source`.
 	fun md: String is cached do
 		assert has_source
-		var file = new IFStream.open(src_full_path.to_s)
+		var file = new FileReader.open(src_full_path.to_s)
 		var md = file.read_all
 		file.close
 		return md
