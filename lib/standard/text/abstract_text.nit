@@ -1213,6 +1213,16 @@ abstract class Buffer
 	# DEPRECATED : Use self.chars.add instead
 	fun add(c: Char) is abstract
 
+	# Adds a byte `b` at the end of `self`
+	#
+	# DEPRECATED : Use self.bytes.add instead
+	fun add_byte(b: Int) is abstract
+
+	# Adds a byte `b` at the end of `self`
+	#
+	# DEPRECATED : Use self.bytes.add instead
+	fun push_byte(b: Int) do add_byte(b)
+
 	# Clears the buffer
 	#
 	#     var b = new Buffer

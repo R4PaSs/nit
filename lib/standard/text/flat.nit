@@ -516,6 +516,13 @@ class FlatBuffer
 		length += 1
 	end
 
+	redef fun add_byte(b) do
+		is_dirty = true
+		if capacity <= length then enlarge(length + 5)
+		items[bytelen] = b.ascii
+		length += 1
+	end
+
 	redef fun clear do
 		is_dirty = true
 		if written then reset

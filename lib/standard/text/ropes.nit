@@ -376,6 +376,18 @@ class RopeBuffer
 		rpos = rp
 	end
 
+	redef fun add_byte(b) do
+		var rp = rpos
+		if rp >= buf_size then
+			dump_buffer
+			rp = 0
+		end
+		ns[rp] = b.ascii
+		rp += 1
+		length += 1
+		rpos = rp
+	end
+
 	# Converts the Buffer to a FlatString, appends it to
 	# the final String and re-allocates a new larger Buffer.
 	private fun dump_buffer do
