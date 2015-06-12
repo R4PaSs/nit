@@ -43,6 +43,8 @@ end
 # A `Stream` that can be read from
 abstract class Reader
 	super Stream
+	var scanner: Sequencer is lazy do return new DefaultSequencer(self)
+
 	# Reads a character. Returns `null` on EOF or timeout
 	fun read_char: nullable Char is abstract
 
@@ -665,4 +667,138 @@ class StringReader
 	end
 
 	redef fun eof do return cursor >= source.length
+end
+
+# Helper class for LL parsing entities in a `Reader`
+class Sequencer
+
+	# Reader associated to `self`
+	fun stream: Reader is abstract
+
+	# Reads a char from `self` or `stream`
+	fun read_char: nullable Char is abstract
+
+	# Reads a string until a whitespace character is encountered
+	fun read_word: String is abstract
+
+	# Reads an Integer value from source
+	fun read_int: Int is abstract
+
+	# Reads a Float value from source
+	fun read_float: Float is abstract
+
+	# Advances in stream until a whitespace is encountered
+	fun skip_whitespaces is abstract
+
+	# Will read chars until some pattern `s` is encountered
+	fun read_until(s: Text): String is abstract
+end
+
+# Special type of scanner with an internal buffer for next chars to read
+class DefaultSequencer
+	super Sequencer
+
+	redef var stream: Reader
+
+	private var lookahead: nullable Char = null
+
+	redef fun read_word do
+		skip_whitespaces
+		var c = read_char
+		var b = new FlatBuffer
+		while c != null and not c.is_whitespace do
+			b.add c
+			c = read_char
+		end
+		if c != null then lookahead = c
+		return b.to_s
+	end
+ 
+	redef fun read_int do
+		skip_whitespaces
+		var c = read_char
+		var b = new FlatBuffer
+		# HACK: If sign is false, append - to b
+		var sign = true
+		while c == '-' do
+			c = read_char
+			sign = not sign
+		end
+		if not sign then b.add '-'
+		while c != null and c.is_numeric do
+			b.add c
+			c = read_char
+		end
+		if c != null then lookahead = c
+		return b.to_i
+	end
+
+	redef fun read_float do
+		skip_whitespaces
+		var c = read_char
+		var b = new FlatBuffer
+		# HACK: If sign is false, append - to b
+		var sign = true
+		while c == '-' do
+			c = read_char
+			sign = not sign
+		end
+		if not sign then b.add '-'
+		var found_dot = false
+		while c != null and (c.is_numeric or c == '.') do
+			if c == '.' then
+				if not found_dot then
+					found_dot = true
+				else
+					break
+				end
+			end
+			b.add c
+			c = read_char
+		end
+		if c != null then lookahead = c
+		return b.to_f
+	end
+
+	redef fun skip_whitespaces do
+		var c = read_char
+		while c != null and c.is_whitespace do c = read_char
+		if c != null then lookahead = c
+	end
+
+	redef fun read_until(s: Text): String do
+		skip_whitespaces
+		var c = read_char
+		var s0 = s[0]
+		var b = new FlatBuffer
+		loop
+			while c != null and c != s0 do
+				b.add c
+				c = read_char
+			end
+			if c == null then break
+			var match = true
+			for i in s do
+				b.add i
+				if c != i then
+					match = false
+					break
+				end
+				c = read_char
+				if c == null then break
+			end
+			if match then break
+		end
+		if c != null then lookahead = c
+		return b.to_s
+	end
+
+	redef fun read_char do
+		var c = lookahead
+		if lookahead != null then
+			lookahead = null
+			return c
+		end
+		return stream.read_char
+	end
 end
