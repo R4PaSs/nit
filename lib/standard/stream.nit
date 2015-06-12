@@ -48,6 +48,12 @@ abstract class Reader
 	# Reads a character. Returns `null` on EOF or timeout
 	fun read_char: nullable Char is abstract
 
+	# Reads an Integer value from source
+	fun read_int: nullable Int do return scanner.read_int
+
+	# Reads a Float value from source
+	fun read_float: nullable Float do return scanner.read_float
+
 	# Reads a byte. Returns `null` on EOF or timeout
 	fun read_byte: nullable Int is abstract
 
@@ -251,22 +257,7 @@ abstract class Reader
 	# ~~~
 	#
 	# `Char::is_whitespace` determines what is a whitespace.
-	fun read_word: String
-	do
-		var buf = new FlatBuffer
-		var c = read_nonwhitespace
-		if c != null then
-			buf.add(c)
-			while not eof do
-				c = read_char
-				if c == null then break
-				if c.is_whitespace then break
-				buf.add(c)
-			end
-		end
-		var res = buf.to_s
-		return res
-	end
+	fun read_word: String do return scanner.read_word
 
 	# Skip whitespace characters (if any) then return the following non-whitespace character.
 	#

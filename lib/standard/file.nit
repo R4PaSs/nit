@@ -1265,6 +1265,16 @@ do
 	sys.stderr.write "\n"
 end
 
+# Reads an Integer value from the standard input (`stdin`)
+#
+# Return `null` if no int could be parsed
+fun geti: nullable Int do return stdin.read_int
+
+# Reads an Integer value from the standard input (`stdin`)
+#
+# Return `null` if no float could be parsed
+fun getf: nullable Float do return stdin.read_float
+
 # Read a character from the standard input (`stdin`).
 fun getc: Char
 do
