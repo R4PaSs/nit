@@ -83,7 +83,7 @@ private class Concat
 	redef var to_cstring is lazy do
 		var len = length
 		var ns = new NativeString(len + 1)
-		ns[len] = '\0'
+		ns[len] = 0u8
 		var off = 0
 		for i in substrings do
 			var ilen = i.length
@@ -326,20 +326,20 @@ class RopeBuffer
 			sits = s.items
 		else
 			if slen <= remsp then
-				for i in s.chars do
+				for i in s.bytes do
 					ns[rpos] = i
 					rpos += 1
 				end
 			else
 				var spos = 0
 				for i in [0..remsp[ do
-					ns[rpos] = s[spos]
+					ns[rpos] = s.bytes[spos]
 					rpos += 1
 					spos += 1
 				end
 				dump_buffer
 				while spos < slen do
-					ns[rpos] = s[spos]
+					ns[rpos] = s.bytes[spos]
 					spos += 1
 					rpos += 1
 				end
@@ -370,7 +370,8 @@ class RopeBuffer
 			dump_buffer
 			rp = 0
 		end
-		ns[rp] = c
+		# TODO: Fix when supporting UTF-8
+		ns[rp] = c.ascii.to_b
 		rp += 1
 		length += 1
 		rpos = rp
@@ -382,7 +383,7 @@ class RopeBuffer
 			dump_buffer
 			rp = 0
 		end
-		ns[rp] = b.ascii
+		ns[rp] = b
 		rp += 1
 		length += 1
 		rpos = rp
@@ -434,20 +435,14 @@ class RopeBuffer
 
 	redef fun upper do
 		if written then reset
+		dump_buffer
 		str = str.to_upper
-		var mits = ns
-		for i in [0 .. rpos[ do
-			mits[i] = mits[i].to_upper
-		end
 	end
 
 	redef fun lower do
 		if written then reset
+		dump_buffer
 		str = str.to_lower
-		var mits = ns
-		for i in [0 .. rpos[ do
-			mits[i] = mits[i].to_lower
-		end
 	end
 end
 
@@ -501,7 +496,7 @@ end
 
 # A reverse iterator capable of working with `Rope` objects
 private class RopeByteReverseIterator
-	super IndexedIterator[Int]
+	super IndexedIterator[Byte]
 
 	# Current NativeString
 	var ns: NativeString
@@ -533,7 +528,7 @@ private class RopeByteReverseIterator
 
 	redef fun is_ok do return pos >= 0
 
-	redef fun item do return ns[pns].ascii
+	redef fun item do return ns[pns]
 
 	redef fun next do
 		pns -= 1
@@ -550,14 +545,14 @@ end
 
 # Forward iterator on the bytes of a `Rope`
 private class RopeByteIterator
-	super IndexedIterator[Int]
+	super IndexedIterator[Byte]
 
 	# Position in current `String`
 	var pns: Int
 	# Current `String` being iterated on
-	var str: String
+	var ns: NativeString
 	# Substrings of the Rope
-	var subs: IndexedIterator[String]
+	var subs: IndexedIterator[FlatString]
 	# Maximum position to iterate on (e.g. Rope.length)
 	var max: Int
 	# Position (char) in the Rope (0-indexed)
@@ -566,7 +561,7 @@ private class RopeByteIterator
 	init(root: Concat) is old_style_init do
 		subs = new RopeSubstrings(root)
 		pns = 0
-		str = subs.item
+		ns = subs.item.items
 		max = root.length - 1
 		pos = 0
 	end
@@ -575,11 +570,11 @@ private class RopeByteIterator
 		subs = new RopeSubstrings.from(root, pos)
 		pns = pos - subs.index
 		self.pos = pos
-		str = subs.item
+		ns = subs.item.items
 		max = root.length - 1
 	end
 
-	redef fun item do return str[pns].ascii
+	redef fun item do return ns[pns]
 
 	redef fun is_ok do return pos <= max
 
@@ -592,7 +587,7 @@ private class RopeByteIterator
 		if not subs.is_ok then return
 		subs.next
 		if not subs.is_ok then return
-		str = subs.item
+		ns = subs.item.items
 		pns = 0
 	end
 end
@@ -933,7 +928,7 @@ private class RopeBytes
 		var b: Int
 		var nod: String = target
 		loop
-			if nod isa FlatString then return nod.items[i].ascii
+			if nod isa FlatString then return nod.items[i]
 			if not nod isa Concat then abort
 			if nod.left.bytelen >= i then
 				nod = nod.right
@@ -956,50 +951,28 @@ class RopeBufferCharIterator
 	# Subiterator.
 	var sit: IndexedIterator[Char]
 
-	# Native string iterated over.
-	var ns: NativeString
-
-	# Current position in `ns`.
-	var pns: Int
-
-	# Maximum position iterable.
-	var maxpos: Int
-
-	redef var index
+	redef fun index do return sit.index
 
 	# Init the iterator from a RopeBuffer.
 	init(t: RopeBuffer) is old_style_init do
-		ns = t.ns
-		maxpos = t.rpos
+		t.dump_buffer
 		sit = t.str.chars.iterator
-		pns = t.dumped
-		index = 0
 	end
 
 	# Init the iterator from a RopeBuffer starting from `pos`.
 	init from(t: RopeBuffer, pos: Int) do
-		ns = t.ns
-		maxpos = t.length
+		t.dump_buffer
 		sit = t.str.chars.iterator_from(pos)
-		pns = pos - t.str.length
-		index = pos
 	end
 
-	redef fun is_ok do return index < maxpos
+	redef fun is_ok do return sit.is_ok
 
 	redef fun item do
-		if sit.is_ok then return sit.item
-		return ns[pns]
+		assert is_ok
+		return sit.item
 	end
 
-	redef fun next do
-		index += 1
-		if sit.is_ok then
-			sit.next
-		else
-			pns += 1
-		end
-	end
+	redef fun next do sit.next
 end
 
 # Reverse iterator over a RopeBuffer.
@@ -1009,45 +982,28 @@ class RopeBufferCharReverseIterator
 	# Subiterator.
 	var sit: IndexedIterator[Char]
 
-	# Native string iterated over.
-	var ns: NativeString
-
-	# Current position in `ns`.
-	var pns: Int
-
-	redef var index
+	redef fun index do return sit.index
 
 	# Init the iterator from a RopeBuffer.
 	init(tgt: RopeBuffer) is old_style_init do
+		tgt.dump_buffer
 		sit = tgt.str.chars.reverse_iterator
-		pns = tgt.rpos - 1
-		index = tgt.length - 1
-		ns = tgt.ns
 	end
 
 	# Init the iterator from a RopeBuffer starting from `pos`.
 	init from(tgt: RopeBuffer, pos: Int) do
-		sit = tgt.str.chars.reverse_iterator_from(pos - tgt.rpos - tgt.dumped)
-		pns = pos - tgt.str.length
-		index = pos
-		ns = tgt.ns
+		tgt.dump_buffer
+		sit = tgt.str.chars.reverse_iterator_from(pos)
 	end
 
-	redef fun is_ok do return index > 0
+	redef fun is_ok do return sit.is_ok
 
 	redef fun item do
-		if pns >= 0 then return ns[pns]
+		assert is_ok
 		return sit.item
 	end
 
-	redef fun next do
-		index -= 1
-		if pns >= 0 then
-			pns -= 1
-		else
-			sit.next
-		end
-	end
+	redef fun next do sit.next
 end
 
 # View on the chars of a `RopeBuffer`
@@ -1060,7 +1016,8 @@ class RopeBufferChars
 		if i < target.str.length then
 			return target.str[i]
 		else
-			return target.ns[i - target.str.length]
+			# TODO: Fix when supporting UTF-8
+			return target.ns[i - target.str.length].to_i.ascii
 		end
 	end
 
@@ -1072,7 +1029,8 @@ class RopeBufferChars
 			var r = s.substring_from(i + 1)
 			target.str = l + c.to_s + r
 		else
-			target.ns[i - target.str.length] = c
+			# TODO: Fix when supporting UTF-8
+			target.ns[i - target.str.length] = c.to_i.to_b
 		end
 	end
 
@@ -1087,10 +1045,10 @@ end
 
 # An Iterator over a RopeBuffer.
 class RopeBufferByteIterator
-	super IndexedIterator[Int]
+	super IndexedIterator[Byte]
 
 	# Subiterator.
-	var sit: IndexedIterator[Int]
+	var sit: IndexedIterator[Byte]
 
 	# Native string iterated over.
 	var ns: NativeString
@@ -1125,7 +1083,7 @@ class RopeBufferByteIterator
 
 	redef fun item do
 		if sit.is_ok then return sit.item
-		return ns[pns].ascii
+		return ns[pns]
 	end
 
 	redef fun next do
@@ -1140,10 +1098,10 @@ end
 
 # Reverse iterator over a RopeBuffer.
 class RopeBufferByteReverseIterator
-	super IndexedIterator[Int]
+	super IndexedIterator[Byte]
 
 	# Subiterator.
-	var sit: IndexedIterator[Int]
+	var sit: IndexedIterator[Byte]
 
 	# Native string iterated over.
 	var ns: NativeString
@@ -1172,7 +1130,7 @@ class RopeBufferByteReverseIterator
 	redef fun is_ok do return index > 0
 
 	redef fun item do
-		if pns >= 0 then return ns[pns].ascii
+		if pns >= 0 then return ns[pns]
 		return sit.item
 	end
 
@@ -1196,7 +1154,7 @@ class RopeBufferBytes
 		if i < target.str.bytelen then
 			return target.str.bytes[i]
 		else
-			return target.ns[i - target.str.length].ascii
+			return target.ns[i - target.str.length]
 		end
 	end
 
@@ -1209,7 +1167,7 @@ class RopeBufferBytes
 			var r = s.substring_from(i + 1)
 			target.str = l + c.to_i.ascii.to_s + r
 		else
-			target.ns[i - target.str.length] = c.ascii
+			target.ns[i - target.str.length] = c
 		end
 	end
 

@@ -42,41 +42,46 @@ redef class String
 	# If using the default padding character `=`, see `encode_base64`.
 	fun encode_base64_custom_padding( padding : Char ) : String
 	do
-		var base64_chars = once base64_chars
-		var length = length
+		var base64_bytes = once base64_chars.bytes
+		var length = bytelen
 
 		var steps = length / 3
-		var chars_in_last_step = length % 3
-		var result_length = steps*4
-		if chars_in_last_step > 0 then result_length += 4
-		var result = (padding.to_s*result_length).to_cstring
+		var bytes_in_last_step = length % 3
+		var result_length = steps * 4
+		if bytes_in_last_step > 0 then result_length += 4
+		var result = new NativeString(result_length + 1)
+		var bytes = self.bytes
+		result[result_length] = 0u8
 
-		var mask_6bit = 63
+		var mask_6bit = 0b0011_1111
 
-		for s in [0..steps[ do
+		for s in [0 .. steps[ do
 			var e = 0
-			for ss in [0..3[ do
-				e += self.chars[s*3+ss].ascii.lshift((2-ss)*8)
+			for ss in [0 .. 3[ do
+				e += bytes[s * 3 + ss].to_i << ((2 - ss) * 8)
 			end
 			for ss in [0..4[ do
-				result[s*4+3-ss] = base64_chars.chars[ e.rshift(ss*6).bin_and( mask_6bit ) ]
+				result[s * 4 + 3 - ss] = base64_bytes[(e >> (ss * 6)) & mask_6bit]
 			end
 		end
 
-		if chars_in_last_step == 1 then
-			var e = self.chars[length-1].ascii.lshift(16)
-			for ss in [0..2[ do
-				result[steps*4+1-ss] = base64_chars.chars[ e.rshift((ss+2)*6).bin_and( mask_6bit ) ]
-			end
-		else if chars_in_last_step == 2 then
-			var e = self.chars[length-2].ascii.lshift(16) +
-				self.chars[length-1].ascii.lshift(8)
-			for ss in [0..3[ do
-				result[steps*4+2-ss] = base64_chars.chars[ e.rshift((ss+1)*6).bin_and( mask_6bit ) ]
-			end
+		var out_off = result_length - 4
+		var in_off = length - bytes_in_last_step
+		if bytes_in_last_step == 1 then
+			result[out_off] = base64_bytes[((bytes[in_off] & 0b1111_1100u8) >> 2).to_i]
+			result[out_off + 1] = base64_bytes[((bytes[in_off] & 0b0000_0011u8) << 4).to_i]
+			out_off += 2
+		else if bytes_in_last_step == 2 then
+			result[out_off] = base64_bytes[((bytes[in_off] & 0b1111_1100u8) >> 2).to_i]
+			result[out_off + 1] = base64_bytes[(((bytes[in_off] & 0b0000_0011u8) << 4) | ((bytes[in_off + 1] & 0b1111_0000u8) >> 4)).to_i]
+			result[out_off + 2] = base64_bytes[((bytes[in_off + 1] & 0b0000_1111u8) << 2).to_i]
+			out_off += 3
+		end
+		if bytes_in_last_step > 0 then
+			for i in [out_off .. result_length[ do result[i] = padding.ascii.to_b
 		end
 
-		return result.to_s
+		return result.to_s_with_length(result_length)
 	end
 
 	# Decodes the receiver string from base64.
@@ -89,11 +94,11 @@ redef class String
 	fun decode_base64_custom_padding( padding : Char ) : String
 	do
 		var inverted_base64_chars = once inverted_base64_chars
-		var length = length
+		var length = bytelen
 		assert length % 4 == 0 else print "base64::decode_base64 only supports strings of length multiple of 4"
 
 		var steps = length / 4
-		var result_length = steps*3
+		var result_length = steps * 3
 
 		var padding_begin = self.search(padding)
 		var padding_count : Int
@@ -105,40 +110,41 @@ redef class String
 			result_length -= padding_count
 		end
 
-		var result = ("#"*result_length).to_cstring
+		var result = new NativeString(result_length + 1)
+		result[result_length] = 0u8
 
-		var mask_8bit = 255
+		var mask_8bit = 0b1111_1111
 
-		for s in [0..steps[ do
+		for s in [0 .. steps[ do
 			var e = 0
-			for ss in [0..4[ do
-				e += inverted_base64_chars[self.chars[s*4+ss]].lshift((3-ss)*6)
+			for ss in [0 .. 4[ do
+				e += inverted_base64_chars[self.bytes[s * 4 + ss].to_i.ascii] << ((3 - ss) * 6)
 			end
 
 			for ss in [0..3[ do
-				result[s*3+ss] = e.rshift((2-ss)*8).bin_and( mask_8bit ).ascii
+				result[s * 3 + ss] = ((e >> ((2 - ss) * 8)) & mask_8bit).to_b
 			end
 		end
 
 		var s = steps
 		if padding_count == 1 then
 			var e = 0
-			for ss in [0..3[ do
-				e += inverted_base64_chars[self.chars[s*4+ss]].lshift((3-ss)*6)
+			for ss in [0 .. 3[ do
+				e += inverted_base64_chars[self.bytes[s * 4 + ss].to_i.ascii] << ((3 - ss) * 6)
 			end
 
-			for ss in [0..2[ do
-				result[s*3+ss] = e.rshift((2-ss)*8).bin_and( mask_8bit ).ascii
+			for ss in [0 .. 2[ do
+				result[s * 3 + ss] = ((e >> ((2 - ss) * 8)) & mask_8bit).to_b
 			end
 		else if padding_count == 2 then
 			var e = 0
-			for ss in [0..2[ do
-				e += inverted_base64_chars[self.chars[s*4+ss]].lshift((3-ss)*6)
+			for ss in [0 .. 2[ do
+				e += inverted_base64_chars[self.bytes[s * 4 + ss].to_i.ascii] >> ((3 - ss) * 6)
 			end
 
-			result[s*3] = e.rshift(2*8).bin_and( mask_8bit ).ascii
+			result[s * 3] = ((e >> 16) & mask_8bit).to_b
 		end
 
-		return result.to_s
+		return result.to_s_with_length(result_length)
 	end
 end

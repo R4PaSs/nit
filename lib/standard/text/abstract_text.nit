@@ -39,7 +39,7 @@ abstract class Text
 	# Gets a view on the bytes of the Text object
 	#
 	#     assert "hello".bytes.to_a == [104, 101, 108, 108, 111]
-	fun bytes: SequenceRead[Int] is abstract
+	fun bytes: SequenceRead[Byte] is abstract
 
 	# Number of characters contained in self.
 	#
@@ -912,7 +912,7 @@ abstract class Text
 		var mypos = src_offset
 		var itspos = dest_offset
 		while n > 0 do
-			dest[itspos] = self.chars[mypos]
+			dest[itspos] = self.bytes[mypos]
 			itspos += 1
 			mypos += 1
 			n -= 1
@@ -988,7 +988,7 @@ end
 # Abstract class for the SequenceRead compatible
 # views on the bytes of any Text
 private abstract class StringByteView
-	super SequenceRead[Int]
+	super SequenceRead[Byte]
 
 	type SELFTYPE: Text
 
@@ -998,7 +998,7 @@ private abstract class StringByteView
 
 	redef fun length do return target.length
 
-	redef fun iterator: IndexedIterator[Int] do return self.iterator_from(0)
+	redef fun iterator do return self.iterator_from(0)
 
 	redef fun reverse_iterator do return self.reverse_iterator_from(self.length - 1)
 end
@@ -1216,12 +1216,12 @@ abstract class Buffer
 	# Adds a byte `b` at the end of `self`
 	#
 	# DEPRECATED : Use self.bytes.add instead
-	fun add_byte(b: Int) is abstract
+	fun add_byte(b: Byte) is abstract
 
 	# Adds a byte `b` at the end of `self`
 	#
 	# DEPRECATED : Use self.bytes.add instead
-	fun push_byte(b: Int) do add_byte(b)
+	fun push_byte(b: Byte) do add_byte(b)
 
 	# Clears the buffer
 	#
@@ -1319,7 +1319,7 @@ abstract class Buffer
 
 	# In Buffers, the internal sequence of bytes is mutable
 	# Thus, `bytes` can be used to modify the buffer.
-	redef fun bytes: Sequence[Int] is abstract
+	redef fun bytes: Sequence[Byte] is abstract
 end
 
 # View for chars on Buffer objects, extends Sequence
@@ -1336,7 +1336,7 @@ end
 # for mutation operations
 private abstract class BufferByteView
 	super StringByteView
-	super Sequence[Int]
+	super Sequence[Byte]
 
 	redef type SELFTYPE: Buffer
 
@@ -1400,7 +1400,7 @@ redef class Byte
 	redef fun to_s do
 		var nslen = byte_to_s_len
 		var ns = new NativeString(nslen + 1)
-		ns[nslen] = '\0'
+		ns[nslen] = 0u8
 		native_byte_to_s(ns, nslen + 1)
 		return ns.to_s_with_length(nslen)
 	end

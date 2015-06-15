@@ -1051,13 +1051,13 @@ redef class AMethPropdef
 				if arg1 >= recvval.length or arg1 < 0 then
 					debug("Illegal access on {recvval} for element {arg1}/{recvval.length}")
 				end
-				return v.char_instance(recvval.chars[arg1])
+				return v.byte_instance(recvval.bytes[arg1])
 			else if pname == "[]=" then
 				var arg1 = args[1].to_i
 				if arg1 >= recvval.length or arg1 < 0 then
 					debug("Illegal access on {recvval} for element {arg1}/{recvval.length}")
 				end
-				recvval.chars[arg1] = args[2].val.as(Char)
+				recvval.bytes[arg1] = args[2].val.as(Byte)
 				return null
 			else if pname == "copy_to" then
 				# sig= copy_to(dest: NativeString, length: Int, from: Int, to: Int)

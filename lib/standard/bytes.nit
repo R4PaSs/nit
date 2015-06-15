@@ -22,10 +22,8 @@ intrude import text::flat
 # A buffer containing Byte-manipulation facilities
 #
 # Uses Copy-On-Write when persisted
-#
-# TODO: Change the bound to Byte when available in stdlib and bootstrap
 class Bytes
-	super AbstractArray[Int]
+	super AbstractArray[Byte]
 
 	# A NativeString being a char*, it can be used as underlying representation here.
 	private var items: NativeString
@@ -61,7 +59,7 @@ class Bytes
 	redef fun [](i) do
 		assert i >= 0
 		assert i < length
-		return items[i].ascii
+		return items[i]
 	end
 
 	#     var b = new Bytes.with_capacity(1)
@@ -72,7 +70,7 @@ class Bytes
 		assert i >= 0
 		assert i <= length
 		if i == length then add(v)
-		items[i] = v.ascii
+		items[i] = v
 	end
 
 	#     var b = new Bytes.empty
@@ -83,7 +81,7 @@ class Bytes
 		if length >= capacity then
 			enlarge(length)
 		end
-		items[length] = c.ascii
+		items[length] = c
 		length += 1
 	end
 
@@ -143,7 +141,7 @@ class Bytes
 end
 
 private class BytesIterator
-	super IndexedIterator[Int]
+	super IndexedIterator[Byte]
 
 	var tgt: NativeString
 
@@ -157,7 +155,7 @@ private class BytesIterator
 
 	redef fun next do index += 1
 
-	redef fun item do return tgt[index].ascii
+	redef fun item do return tgt[index]
 end
 
 redef class NativeString
