@@ -287,7 +287,7 @@ class NaiveInterpreter
 	fun string_instance(txt: String): Instance
 	do
 		var nat = native_string_instance(txt)
-		var res = self.send(self.force_get_primitive_method("to_s_with_length", nat.mtype), [nat, self.int_instance(txt.length)])
+		var res = self.send(self.force_get_primitive_method("to_s_with_length", nat.mtype), [nat, self.int_instance(txt.bytelen)])
 		assert res != null
 		return res
 	end

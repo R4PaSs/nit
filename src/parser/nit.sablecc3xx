@@ -23,7 +23,7 @@ Package org.nitlanguage.gen;
 Helpers
 /*****************************************************************************/
 
-all = [0 .. 0xFF];
+all = [0 .. 0xFFFF];
 lowercase = ['a' .. 'z'];
 uppercase = ['A' .. 'Z'];
 digit = ['0' .. '9'];
