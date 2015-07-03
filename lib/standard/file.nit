@@ -195,7 +195,7 @@ class FileWriter
 			last_error = new IOError("cannot write to non-writable stream")
 			return
 		end
-		for i in s.substrings do write_native(i.to_cstring, i.length)
+		for i in s.substrings do write_native(i.to_cstring, i.bytelen)
 	end
 
 	redef fun write_byte(value)
