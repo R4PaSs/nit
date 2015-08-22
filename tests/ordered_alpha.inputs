@@ -1,0 +1,12 @@
+billowy
+biopsy
+chinos
+defaced
+chintz
+sponged
+bijoux
+abhors
+fiddle
+begins
+chimps
+wronged
