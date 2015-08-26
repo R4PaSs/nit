@@ -159,4 +159,15 @@ extern class NativeString `{ char* `}
 
 	fun length=(i: Int) is intern
 
+	fun add(b: Byte) do
+		self[pos] = b
+		pos += 1
+	end
+
+	fun append_from(ns: NativeString, from, len: Int) do
+		ns.copy_to(self, len, from, pos)
+		pos += len
+	end
+
+	fun remaining_space: Int do return length - pos
 end

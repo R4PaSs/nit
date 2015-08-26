@@ -553,13 +553,23 @@ redef class FlatString
 		if s isa FlatString then
 			if nlen > maxlen then return new Concat(self, s)
 			var mits = items
+			var sits = s.items
 			var sifrom = s.first_byte
 			var mifrom = first_byte
-			var sits = s.items
-			var ns = new NativeString(nlen + 1)
-			mits.copy_to(ns, mlen, mifrom, 0)
-			sits.copy_to(ns, slen, sifrom, mlen)
-			return ns.to_s_with_length(nlen)
+			var nnsfrom = first_byte
+			var nns = items
+			if nns.remaining_space < slen then
+				nns = new NativeString(nlen)
+				nns.append_from(items, mifrom, mlen)
+				nnsfrom = 0
+			end
+			if last_byte + 1 != nns.pos then
+				nns = new NativeString(nlen)
+				nns.append_from(items, mifrom, mlen)
+				nnsfrom = 0
+			end
+			nns.append_from(sits, sifrom, slen)
+			return new FlatString.with_infos(nns, nlen, nnsfrom, nnsfrom + nlen - 1)
 		else if s isa Concat then
 			var sl = s.left
 			var sllen = sl.bytelen
@@ -568,6 +578,13 @@ redef class FlatString
 		else
 			abort
 		end
+	end
+end
+
+redef class NativeString
+	redef new(i) do
+		if i < maxlen then i = maxlen
+		return super(i)
 	end
 end
 
