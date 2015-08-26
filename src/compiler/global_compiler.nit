@@ -164,6 +164,10 @@ class GlobalCompiler
 	# Usualy, all C variables that refers to a Nit object are typed on the abstract struct `val` that contains only the `classid` field.
 	redef fun compile_header_structs do
 		self.header.add_decl("typedef struct \{int classid;\} val; /* general C type representing a Nit instance. */")
+		self.header.add_decl("#define CHARST_TO_NITNS(ns) ((native_string*)((ns - sizeof(long)*2)))")
+		self.header.add_decl("#define NITNS_TO_CHARST(ns) ((native_string*)ns)->items")
+		self.header.add_decl("typedef char* nit_ns;")
+		self.header.add_decl("typedef struct \{long len; long pos; char items[];\} native_string; /* Nit NativeString with a buffer-like behaviour */")
 	end
 
 	# Subset of runtime_type_analysis.live_types that contains only primitive types

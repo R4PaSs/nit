@@ -1959,7 +1959,7 @@ redef class MClassType
 		else if mclass.name == "UInt32" then
 			return "uint32_t"
 		else if mclass.name == "NativeString" then
-			return "char*"
+			return "nit_ns"
 		else if mclass.name == "NativeArray" then
 			return "val*"
 		else
@@ -2457,8 +2457,23 @@ redef class AMethPropdef
 			else if pname == "fast_cstring" then
 				v.ret(v.new_expr("{arguments[0]} + {arguments[1]}", ret.as(not null)))
 				return true
+			else if pname == "pos" then
+				v.ret(v.new_expr("(CHARST_TO_NITNS({arguments[0]}))->pos", ret.as(not null)))
+				return true
+			else if pname == "pos=" then
+				v.add("(CHARST_TO_NITNS({arguments[0]}))->pos = {arguments[1]};")
+				return true
+			else if pname == "length" then
+				v.ret(v.new_expr("(CHARST_TO_NITNS({arguments[0]}))->len", ret.as(not null)))
+				return true
+			else if pname == "length=" then
+				v.add("(CHARST_TO_NITNS({arguments[0]}))->len = {arguments[1]};")
+				return true
 			else if pname == "new" then
-				v.ret(v.new_expr("(char*)nit_alloc({arguments[1]})", ret.as(not null)))
+				v.add("long internal_ln = {arguments[1]};")
+				v.add("native_string* ns = (native_string*)nit_alloc(sizeof(long)*2+internal_ln);")
+				v.add("ns->len=internal_ln;ns->pos=0;")
+				v.ret(v.new_expr("ns->items", ret.as(not null)))
 				return true
 			end
 		else if cname == "NativeArray" then

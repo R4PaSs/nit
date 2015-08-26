@@ -216,7 +216,10 @@ class SeparateCompiler
 		self.header.add_decl("typedef void(*nitmethod_t)(void); /* general C type representing a Nit method. */")
 		self.compile_header_attribute_structs
 		self.header.add_decl("struct class \{ int box_kind; nitmethod_t vft[]; \}; /* general C type representing a Nit class. */")
-
+		self.header.add_decl("#define CHARST_TO_NITNS(ns) ((native_string*)((ns - sizeof(long)*2)))")
+		self.header.add_decl("#define NITNS_TO_CHARST(ns) ((native_string*)ns)->items")
+		self.header.add_decl("typedef char* nit_ns;")
+		self.header.add_decl("typedef struct \{long len; long pos; char items[];\} native_string; /* Nit NativeString with a buffer-like behaviour */")
 		# With resolution_table_table, all live type resolution are stored in a big table: resolution_table
 		self.header.add_decl("struct type \{ int id; const char *name; int color; short int is_nullable; const struct types *resolution_table; int table_size; int type_table[]; \}; /* general C type representing a Nit type. */")
 		self.header.add_decl("struct instance \{ const struct type *type; const struct class *class; nitattribute_t attrs[]; \}; /* general C type representing a Nit instance. */")

@@ -150,4 +150,13 @@ extern class NativeString `{ char* `}
 		if length_of_char_at(stpos) >= (endpos - stpos + 1) then return pos
 		return endpos
 	end
+
+	fun pos: Int is intern
+
+	fun pos=(i: Int) is intern
+
+	fun length: Int is intern
+
+	fun length=(i: Int) is intern
+
 end
