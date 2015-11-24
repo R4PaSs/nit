@@ -155,6 +155,16 @@ class Bytes
 		length += 1
 	end
 
+	# Adds the UTF-8 representation of `c` to `self`
+	fun add_char(c: Char) do
+		if persisted then regen
+		var cln = c.u8char_len
+		var ln = length
+		enlarge(ln + cln)
+		items.set_char_at(length, c)
+		length += cln
+	end
+
 	#     var b = new Bytes.empty
 	#     b.append([104u8, 101u8, 108u8, 108u8, 111u8])
 	#     assert b.to_s == "hello"
