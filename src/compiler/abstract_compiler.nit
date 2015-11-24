@@ -1588,6 +1588,18 @@ abstract class AbstractCompilerVisitor
 		return res
 	end
 
+	# Generates a NativeString instance fully escaped in C-style \xHH fashion
+	fun native_string_instance(ns: NativeString, len: Int): RuntimeVariable do
+		var mtype = mmodule.native_string_type
+		var nat = new_var(mtype)
+		var byte_esc = new Buffer.with_cap(len * 4)
+		for i in [0 .. len[ do
+			byte_esc.append("\\x{ns[i].to_s.substring_from(2)}")
+		end
+		self.add("{nat} = \"{byte_esc}\";")
+		return nat
+	end
+
 	# Generate a string value
 	fun string_instance(string: String): RuntimeVariable
 	do
