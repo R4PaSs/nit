@@ -3491,7 +3491,11 @@ redef class AFloatExpr
 end
 
 redef class ACharExpr
-	redef fun expr(v) do return v.char_instance(self.value.as(not null))
+	redef fun expr(v) do
+		if is_ascii then return v.byte_instance(value.as(not null).ascii)
+		if is_code_point then return v.int_instance(value.as(not null).code_point)
+		return v.char_instance(self.value.as(not null))
+	end
 end
 
 redef class AArrayExpr
@@ -3513,7 +3517,33 @@ redef class AArrayExpr
 end
 
 redef class AStringFormExpr
-	redef fun expr(v) do return v.string_instance(self.value.as(not null))
+	redef fun expr(v) do
+		var s: RuntimeVariable
+		if is_string then
+			s = v.string_instance(value)
+		else if is_bytestring then
+			var ns = v.native_string_instance(bytes.items, bytes.length)
+			var ln = v.int_instance(bytes.length)
+			var res = v.send(v.get_property("to_bytes_with_copy", ns.mtype), [ns, ln])
+			if res == null then
+				print "Cannot call property `to_bytes` on {self}"
+				abort
+			end
+			s = res
+		else if is_re then
+			s = v.string_instance(self.value)
+			var res = v.send(v.get_property("to_re", s.mtype), [s])
+			if res == null then
+				print "Cannot call property `to_re` on {self}"
+				abort
+			end
+			s = res
+		else
+			print "Unimplemented prefix or suffix for {self}"
+			abort
+		end
+		return s
+	end
 end
 
 redef class ASuperstringExpr

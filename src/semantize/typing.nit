@@ -1447,7 +1447,14 @@ end
 redef class ACharExpr
 	redef fun accept_typing(v)
 	do
-		var mclass = v.get_mclass(self, "Char")
+		var mclass: nullable MClass
+		if is_ascii then
+			mclass = v.get_mclass(self, "Byte")
+		else if is_code_point then
+			mclass = v.get_mclass(self, "Int")
+		else
+			mclass = v.get_mclass(self, "Char")
+		end
 		if mclass == null then return # Forward error
 		self.mtype = mclass.mclass_type
 	end
@@ -1456,7 +1463,16 @@ end
 redef class AStringFormExpr
 	redef fun accept_typing(v)
 	do
-		var mclass = v.get_mclass(self, "String")
+		var mclass: nullable MClass
+		if is_bytestring then
+			mclass = v.get_mclass(self, "Bytes")
+		else if is_re then
+			mclass = v.get_mclass(self, "Regex")
+		else if is_string then
+			mclass = v.get_mclass(self, "String")
+		else
+			mclass = null
+		end
 		if mclass == null then return # Forward error
 		self.mtype = mclass.mclass_type
 	end

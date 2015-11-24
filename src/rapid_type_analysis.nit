@@ -223,6 +223,8 @@ class RapidTypeAnalysis
 		force_alive("UInt16")
 		force_alive("Int32")
 		force_alive("UInt32")
+		force_alive("Bytes")
+		force_alive("Regex")
 
 		while not todo.is_empty do
 			var mmethoddef = todo.shift
