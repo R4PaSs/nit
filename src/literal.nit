@@ -95,12 +95,39 @@ redef class AFloatExpr
 	end
 end
 
+# Any kind of entity which supports a prefix or a suffix
+class AAugmentedEntity
+	# Returns the text of the token
+	private fun text: String is abstract
+
+	# Prefix for the entity, "" if no prefix is found
+	private fun parse_prefix(del: Char): String do return text.substring(0, text.index_of(del))
+
+	# Suffix for the entity, "" if no prefix is found
+	private fun parse_suffix(del: Char): String do return text.substring_from(text.last_index_of(del) + 1)
+end
+
 redef class ACharExpr
+	super AAugmentedEntity
 	# The value of the literal char once computed.
-	var value: nullable Char
+	var value: nullable Char = '\0'
+
+	# Is the expression returning an ASCII byte value ?
+	fun is_ascii: Bool do return parse_prefix('\'') == "a"
+
+	# Is the expression returning a Code Point ?
+	fun is_code_point: Bool do return parse_prefix('\'') == "u"
+
+	redef fun text do return n_char.text
+
 	redef fun accept_literal(v)
 	do
-		var txt = self.n_char.text.unescape_nit
+		var prefix = parse_prefix('\'')
+		var suffix = parse_suffix('\'')
+		var txt = text
+		if prefix != "" then txt = txt.substring_from(prefix.length)
+		if suffix != "" then txt = txt.substring(0, txt.length - suffix.length)
+		txt = txt.unescape_nit
 		if txt.length != 3 then
 			v.toolcontext.error(self.hot_location, "Syntax Error: invalid character literal `{txt}`.")
 			return
@@ -110,11 +137,35 @@ redef class ACharExpr
 end
 
 redef class AStringFormExpr
+	super AAugmentedEntity
 	# The value of the literal string once computed.
 	var value: nullable String
+
+	# The underlying bytes of the String, non-cleaned for UTF-8
+	var bytes: Bytes is noinit
+
+	# Is `self` a regular String object ?
+	fun is_string: Bool do return (fetch_prefix == "" or fetch_prefix == "raw") and fetch_suffix == ""
+
+	# Is `self` a Regular Expression ?
+	fun is_re: Bool do return fetch_prefix == "re"
+
+	# Is `self` a Byte String ?
+	fun is_bytestring: Bool do return fetch_prefix == "b"
+
+	redef fun text do return n_string.text
+
+	private fun fetch_prefix: String is abstract
+
+	private fun fetch_suffix: String is abstract
+
 	redef fun accept_literal(v)
 	do
-		var txt = self.n_string.text
+		var txt = text
+		var suffix = fetch_suffix
+		var prefix = fetch_prefix
+		if prefix != "" then txt = txt.substring_from(prefix.length)
+		if suffix != "" then txt = txt.substring(0, txt.length - suffix.length)
 		var behead = 1
 		var betail = 1
 		if txt.chars[0] == txt.chars[1] and txt.length >= 6 then
@@ -122,6 +173,33 @@ redef class AStringFormExpr
 			betail = 3
 			if txt.chars[0] == '"' and txt.chars[3] == '\n' then behead = 4 # ignore first \n in """
 		end
-		self.value = txt.substring(behead, txt.length - behead - betail).unescape_nit
+		txt = txt.substring(behead, txt.length - behead - betail)
+		if prefix == "raw" then
+			bytes = txt.to_bytes
+		else
+			bytes = txt.unescape_to_bytes
+			txt = bytes.to_s
+		end
+		value = txt
 	end
+end
+
+redef class AEndStringExpr
+	redef fun fetch_prefix do return ""
+	redef fun fetch_suffix do return parse_suffix('"')
+end
+
+redef class AStartStringExpr
+	redef fun fetch_prefix do return parse_prefix('"')
+	redef fun fetch_suffix do return ""
+end
+
+redef class AMidStringExpr
+	redef fun fetch_prefix do return ""
+	redef fun fetch_suffix do return ""
+end
+
+redef class AStringExpr
+	redef fun fetch_prefix do return parse_prefix('"')
+	redef fun fetch_suffix do return parse_suffix('"')
 end
