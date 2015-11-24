@@ -130,7 +130,7 @@ end
 redef class AStringExpr
 
 	redef fun accept_string_finder(v) do
-		var str = value.as(not null).escape_to_gettext
+		var str = value.escape_to_gettext
 		var code = "\"{str}\".get_translation(\"{v.domain}\", \"{v.languages_location}\")"
 		var parse = v.toolcontext.parse_expr(code)
 		replace_with(parse)
@@ -146,7 +146,7 @@ redef class ASuperstringExpr
 		for i in n_exprs do
 			if i isa AStartStringExpr or i isa AEndStringExpr or i isa AMidStringExpr then
 				assert i isa AStringFormExpr
-				fmt += i.value.as(not null)
+				fmt += i.value
 			else
 				fmt += "%"
 				exprs.push i

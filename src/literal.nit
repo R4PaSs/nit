@@ -62,7 +62,7 @@ redef class AExpr
 	fun as_string: nullable String
 	do
 		if not self isa AStringFormExpr then return null
-		return self.value.as(not null)
+		return self.value
 	end
 
 	# Get `self` as an `Int`.
@@ -139,7 +139,7 @@ end
 redef class AStringFormExpr
 	super AAugmentedEntity
 	# The value of the literal string once computed.
-	var value: nullable String
+	var value: String is noinit
 
 	# The underlying bytes of the String, non-cleaned for UTF-8
 	var bytes: Bytes is noinit
