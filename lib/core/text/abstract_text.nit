@@ -1081,6 +1081,12 @@ end
 abstract class FlatText
 	super Text
 
+	# Superset of `items` contains the information about the buffered shell
+	var buff_items: BufferedNativeString is noinit
+
+	# Does `self` have a buffered native string ?
+	var has_buff = false
+
 	# Underlying C-String (`char*`)
 	#
 	# Warning : Might be void in some subclasses, be sure to check

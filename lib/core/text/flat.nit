@@ -365,7 +365,12 @@ class FlatString
 		var c = char_to_byte_index(from)
 		var st = c - _first_byte
 		var fln = bytelen - st
-		return new FlatString.full(items, fln, c, _length - from)
+		var s = new FlatString.full(items, fln, c, _length - from)
+		if has_buff then
+			s.has_buff = has_buff
+			s.buff_items = buff_items
+		end
+		return s
 	end
 
 	redef fun substring(from, count)
@@ -404,6 +409,10 @@ class FlatString
 		byteto += its.length_of_char_at(byteto) - 1
 
 		var s = new FlatString.full(its, byteto - bytefrom + 1, bytefrom, count)
+		if has_buff then
+			s.has_buff = has_buff
+			s.buff_items = buff_items
+		end
 		return s
 	end
 

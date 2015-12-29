@@ -654,6 +654,16 @@ abstract class AbstractCompiler
 		self.header.add_decl("#include <sys/types.h>\n")
 		self.header.add_decl("#include <unistd.h>\n")
 		self.header.add_decl("#include <stdint.h>\n")
+		self.header.add_decl("#define NIT_STRING")
+		self.header.add_decl("// A char* wrapper with some facilities to improve runtime")
+		self.header.add_decl("typedef struct nit_string \{")
+		self.header.add_decl("	// Position of the next available byte in items")
+		self.header.add_decl("	long next;")
+		self.header.add_decl("	// Capacity of items")
+		self.header.add_decl("	long capacity;")
+		self.header.add_decl("	// The content of the native string")
+		self.header.add_decl("	char items[];")
+		self.header.add_decl("\} nit_string;")
 		self.header.add_decl("#ifdef __linux__")
 		self.header.add_decl("	#include <endian.h>")
 		self.header.add_decl("#endif")
@@ -1976,6 +1986,8 @@ redef class MClassType
 			return "uint32_t"
 		else if mclass.name == "NativeString" then
 			return "char*"
+		else if mclass.name == "BufferedNativeString" then
+			return "nit_string*"
 		else if mclass.name == "NativeArray" then
 			return "val*"
 		else
@@ -2016,6 +2028,8 @@ redef class MClassType
 			return "i32"
 		else if mclass.name == "UInt32" then
 			return "u32"
+		else if mclass.name == "BufferedNativeString" then
+			return "nitstr"
 		else if mclass.name == "NativeString" then
 			return "str"
 		else if mclass.name == "NativeArray" then
@@ -2481,6 +2495,42 @@ redef class AMethPropdef
 				return true
 			else if pname == "to_u32" then
 				v.ret(v.new_expr("(uint32_t){arguments[0]}", ret.as(not null)))
+				return true
+			end
+		else if cname == "BufferedNativeString" then
+			if pname == "new" then
+				v.add("nit_string* nstr = (nit_string*) nit_alloc(2 * sizeof(long) + {arguments[1]});")
+				v.add("nstr->capacity = {arguments[1]};")
+				v.add("nstr->next = 0;")
+				v.ret(v.new_expr("nstr", ret.as(not null)))
+				return true
+			else if pname == "[]" then
+				v.ret(v.new_expr("{arguments[0]}->items[{arguments[1]}]", ret.as(not null)))
+				return true
+			else if pname == "[]=" then
+				v.add("{arguments[0]}->items[{arguments[1]}]=(unsigned char){arguments[2]};")
+				return true
+			else if pname == "next" then
+				v.ret(v.new_expr("{arguments[0]}->next", ret.as(not null)))
+				return true
+			else if pname == "items" then
+				v.ret(v.new_expr("{arguments[0]}->items", ret.as(not null)))
+				return true
+			else if pname == "capacity" then
+				v.ret(v.new_expr("{arguments[0]}->capacity", ret.as(not null)))
+				return true
+			else if pname == "next=" then
+				v.add("{arguments[0]}->next = {arguments[1]};")
+				return true
+			else if pname == "capacity=" then
+				v.add("{arguments[0]}->capacity = {arguments[1]};")
+				return true
+			else if pname == "==" then
+				v.ret(v.equal_test(arguments[0], arguments[1]))
+				return true
+			else if pname == "!=" then
+				var res = v.equal_test(arguments[0], arguments[1])
+				v.ret(v.new_expr("!{res}", ret.as(not null)))
 				return true
 			end
 		else if cname == "NativeString" then

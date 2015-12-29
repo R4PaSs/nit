@@ -330,7 +330,7 @@ class GlobalCompilerVisitor
 	redef fun unbox_extern(value, mtype)
 	do
 		if mtype isa MClassType and mtype.mclass.kind == extern_kind and
-		   mtype.mclass.name != "NativeString" then
+		   mtype.mclass.name != "NativeString" and mtype.mclass.name != "BufferedNativeString" then
 			var res = self.new_var_extern(mtype)
 			self.add "{res} = ((struct {mtype.c_name}*){value})->value; /* unboxing {value.mtype} */"
 			return res

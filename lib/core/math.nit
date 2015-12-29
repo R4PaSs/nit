@@ -93,6 +93,26 @@ redef class Int
 	#     assert 16.sqrt == 4
 	fun sqrt: Int `{ return sqrt(self); `}
 
+	# Gets the next power of 2 from self
+	#
+	# ~~~nit
+	# var i = 5
+	# assert i.next_pow2 == 8
+	# i = 2047
+	# assert i.next_pow2 == 2048
+	# ~~~
+	fun next_pow2: Int do
+		var v = self
+		v -= 1
+		v |= v >> 1
+		v |= v >> 2
+		v |= v >> 4
+		v |= v >> 8
+		v |= v >> 16
+		v += 1
+		return v & 0xFFFFFFFF
+	end
+
 	# Returns the greatest common divisor of `self` and `o`
 	#
 	#     assert 54.gcd(24)   == 6

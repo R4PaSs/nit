@@ -253,7 +253,7 @@ class SeparateCompiler
 		# Collect all bas box class
 		# FIXME: this is not completely fine with a separate compilation scheme
 		for classname in ["Int", "Bool", "Byte", "Char", "Float", "NativeString",
-		                 "Pointer", "Int8", "Int16", "UInt16", "Int32", "UInt32"] do
+		                 "Pointer", "Int8", "Int16", "UInt16", "Int32", "UInt32", "BufferedNativeString"] do
 			var classes = self.mainmodule.model.get_mclasses_by_name(classname)
 			if classes == null then continue
 			assert classes.length == 1 else print classes.join(", ")
@@ -269,7 +269,7 @@ class SeparateCompiler
 		#if mclass.mclass_type.ctype == "val*" or mclass.mclass_type.is_subtype(self.mainmodule, mclass.mclass_type pointer_type) then
 		if mclass.mclass_type.ctype_extern == "val*" then
 			return 0
-		else if mclass.kind == extern_kind and mclass.name != "NativeString" then
+		else if mclass.kind == extern_kind and mclass.name != "NativeString" and mclass.name != "BufferedNativeString" then
 			return self.box_kinds[self.mainmodule.pointer_type.mclass]
 		else
 			return self.box_kinds[mclass]
@@ -935,7 +935,8 @@ class SeparateCompiler
 			v.add("return (val*){res};")
 			v.add("\}")
 			return
-		else if mtype.mclass.kind == extern_kind and mtype.mclass.name != "NativeString" then
+		else if mtype.mclass.kind == extern_kind and mtype.mclass.name != "BufferedNativeString" and
+		        mtype.mclass.name != "NativeString" then
 			# Is an extern class (other than Pointer and NativeString)
 			# Pointer is caught in a previous `if`, and NativeString is internal
 
@@ -1236,7 +1237,8 @@ class SeparateCompilerVisitor
 				return res
 			end
 			var valtype = value.mtype.as(MClassType)
-			if mtype isa MClassType and mtype.mclass.kind == extern_kind and mtype.mclass.name != "NativeString" then
+			if mtype isa MClassType and mtype.mclass.kind == extern_kind and
+			         mtype.mclass.name != "NativeString" and mtype.mclass.name != "BufferedNativeString" then
 				valtype = compiler.mainmodule.pointer_type
 			end
 			var res = self.new_var(mtype)
@@ -1261,7 +1263,7 @@ class SeparateCompilerVisitor
 	redef fun unbox_extern(value, mtype)
 	do
 		if mtype isa MClassType and mtype.mclass.kind == extern_kind and
-		   mtype.mclass.name != "NativeString" then
+		   mtype.mclass.name != "NativeString" and mtype.mclass.name != "BufferedNativeString" then
 			var pointer_type = compiler.mainmodule.pointer_type
 			var res = self.new_var_extern(mtype)
 			self.add "{res} = ((struct instance_{pointer_type.c_name}*){value})->value; /* unboxing {value.mtype} */"
@@ -1274,7 +1276,7 @@ class SeparateCompilerVisitor
 	redef fun box_extern(value, mtype)
 	do
 		if mtype isa MClassType and mtype.mclass.kind == extern_kind and
-		   mtype.mclass.name != "NativeString" then
+		   mtype.mclass.name != "NativeString" and mtype.mclass.name != "BufferedNativeString" then
 			var valtype = compiler.mainmodule.pointer_type
 			var res = self.new_var(mtype)
 			compiler.undead_types.add(mtype)
@@ -1883,7 +1885,8 @@ class SeparateCompilerVisitor
 		if not value.mtype.is_c_primitive then
 			self.add "{res} = {value} == NULL ? \"null\" : {type_info(value)}->name;"
 		else if value.mtype isa MClassType and value.mtype.as(MClassType).mclass.kind == extern_kind and
-			value.mtype.as(MClassType).name != "NativeString" then
+			value.mtype.as(MClassType).name != "NativeString" and
+			value.mtype.as(MClassType).name != "BufferedNativeString" then
 			self.add "{res} = \"{value.mtype.as(MClassType).mclass}\";"
 		else
 			self.require_declaration("type_{value.mtype.c_name}")

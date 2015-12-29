@@ -15,6 +15,19 @@ import kernel
 import math
 
 in "C" `{
+#ifndef NIT_STRING
+	#define NIT_STRING
+	// A char* wrapper with some facilities to improve runtime
+	typedef struct nit_string {
+		// Position of the next available byte in items
+		long next;
+		// Capacity of items
+		long capacity;
+		// The content of the native string
+		char items[];
+	} nit_string;
+#endif
+
 #ifdef __linux__
 	#include <endian.h>
 #endif
@@ -282,4 +295,118 @@ extern class NativeString `{ char* `}
 	# FIXME: To remove when bootstrap supports PR #1898
 	private fun fetch_4_ffi(pos: Int): Int `{ return (long)*((uint32_t*)(self+pos)); `}
 	private fun fetch_4h_ffi(pos: Int): Int `{ return (long)be32toh(*((uint32_t*)(self+pos))); `}
+end
+
+# A NativeString with several attributes which allows it to run like a `Buffer`
+extern class BufferedNativeString `{ nit_string* `}
+	# Creates a new BufferedNativeString instance with a capacity of `length`
+	new(length: Int) is intern `{
+		nit_string* nstr = (nit_string*) malloc(2 * sizeof(long) + length);
+		nstr->capacity = length;
+		nstr->next = 0;
+		return nstr;
+	`}
+
+	# Position of the next available byte in `items`
+	fun next: Int is intern `{ return self->next; `}
+
+	# Sets the value of `next` to `n`
+	fun next=(n: Int) is intern `{ self->next = n; `}
+
+	# Capacity (in bytes) of `items`
+	fun capacity: Int is intern `{ return self->capacity; `}
+
+	# Sets the value of `capacity` to `c`
+	fun capacity=(c: Int) is intern `{ self->capacity = c; `}
+
+	# The content of the string
+	fun items: NativeString is intern `{ return self->items; `}
+
+	# Appends the `length` first bytes of `ns` to `self`
+	fun append(ns: NativeString, length: Int) do
+		ns.copy_to(items, length, 0, next)
+		next += length
+	end
+
+	# Number of UTF-8 characters in `self` starting at `from`, for a length of `bytelen`
+	fun utf8_length(from, bytelen: Int): Int do return items.utf8_length(from, bytelen)
+
+	# Fetch 4 chars in `self` at `pos`
+	fun fetch_4_chars(pos: Int): Int is intern do return items.fetch_4_ffi(pos)
+
+	# Fetch 4 chars in `self` at `pos`
+	fun fetch_4_hchars(pos: Int): Int is intern do return items.fetch_4h_ffi(pos)
+
+	# Returns the beginning position of the char at position `pos`
+	#
+	# If the char is invalid UTF-8, `pos` is returned as-is
+	#
+	# ~~~raw
+	# 	assert "abc".items.find_beginning_of_char_at(2) == 2
+	# 	assert "か".items.find_beginning_of_char_at(1) == 0
+	#	assert [0x41u8, 233u8].to_s.items.find_beginning_of_char_at(1) == 1
+	# ~~~
+	fun find_beginning_of_char_at(pos: Int): Int do return items.find_beginning_of_char_at(pos)
+
+	# Returns a char* starting at `index`.
+	#
+	# WARNING: Unsafe for extern code, use only for temporary
+	# pointer manipulation purposes (e.g. write to file or such)
+	fun fast_cstring(index: Int): NativeString is intern do return items.fast_cstring(index)
+
+	# Get char at `index`.
+	fun [](index: Int): Byte is intern do return items[index]
+
+	# Set char `item` at index.
+	fun []=(index: Int, item: Byte) is intern do items[index] = item
+
+	# Copy `self` to `dest`.
+	fun copy_to(dest: NativeString, length: Int, from: Int, to: Int) is intern do items.copy_to(dest, length, from, to)
+
+	# Position of the first nul character.
+	fun cstring_length: Int do return items.cstring_length
+
+	# Parse `self` as an Int.
+	fun atoi: Int is intern do return items.atoi
+
+	# Parse `self` as a Float.
+	fun atof: Float `{ return atof(self->items); `}
+
+	# Gets the UTF-8 char at index `pos`
+	#
+	# Index is expressed in Unicode chars
+	#
+	# ~~~raw
+	#     assert "かきく".as(FlatString).items.char_at(0) == 'か'
+	# ~~~
+	#
+	# If the char at position pos is an invalid Unicode char,
+	# the Unicode replacement character � (0xFFFD) will be used.
+	#
+	# ~~~raw
+	#     assert "かきく".as(FlatString).items.char_at(1) == '�'
+	# ~~~
+	fun char_at(pos: Int): Char do return items.char_at(pos)
+
+	# Gets the byte index of char at position `n` in UTF-8 String
+	fun char_to_byte_index(n: Int): Int do return items.char_to_byte_index_cached(n, 0, 0)
+
+	# Gets the length of the character at position `pos` (1 if invalid sequence)
+	fun length_of_char_at(pos: Int): Int do return items.length_of_char_at(pos)
+
+	# Gets the byte index of char at position `n` in UTF-8 String
+	#
+	# `char_from` and `byte_from` are cached values to seek from.
+	#
+	# NOTE: char_from and byte_from are not guaranteed to be valid cache values
+	# It it up to the client to ensure the validity of the information
+	fun char_to_byte_index_cached(n, char_from, byte_from: Int): Int do return items.char_to_byte_index_cached(n, char_from, byte_from)
+
+	# Gets the char index of byte at position `n` in a UTF-8 String
+	#
+	# `char_from` and `byte_from` are cached values to seek from.
+	#
+	# NOTE: char_from and byte_from are not guaranteed to be valid cache values
+	# It it up to the client to ensure the validity of the information
+	fun byte_to_char_index_cached(n, char_from, byte_from: Int): Int do return items.byte_to_char_index_cached(n, char_from, byte_from)
 end

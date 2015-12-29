@@ -58,7 +58,7 @@ intrude import flat
 #
 # Its purpose is to limit the depth of the `Rope` (this
 # improves performance when accessing/iterating).
-fun maxlen: Int do return 64
+fun maxlen: Int do return 4096
 
 # String using a tree-based representation with leaves as `FlatStrings`
 private abstract class Rope
@@ -580,27 +580,40 @@ redef class FlatString
 	end
 
 	redef fun +(o) do
-		var s = o.to_s
-		var slen = s.bytelen
+		var olen = o.bytelen
 		var mlen = _bytelen
-		if slen == 0 then return self
-		if mlen == 0 then return s
-		var nlen = slen + mlen
-		if s isa FlatString then
-			if nlen > maxlen then return new Concat(self, s)
+		if olen == 0 then return self
+		if mlen == 0 then return o.to_s
+		var nlen = olen + mlen
+		if o isa FlatText then
+			if nlen >= maxlen then return new Concat(self, o.to_s)
 			var mits = _items
-			var sifrom = s._first_byte
+			var oifrom = o.first_byte
 			var mifrom = _first_byte
-			var sits = s._items
-			var ns = new NativeString(nlen + 1)
-			mits.copy_to(ns, mlen, mifrom, 0)
-			sits.copy_to(ns, slen, sifrom, mlen)
-			return new FlatString.full(ns, nlen, 0, length + s.length)
-		else if s isa Concat then
-			var sl = s._left
-			var sllen = sl.bytelen
-			if sllen + mlen > maxlen then return new Concat(self, s)
-			return new Concat(self + sl, s._right)
+			var oits = o._items
+			if has_buff then
+				var bits = buff_items
+				if (bits.capacity - mifrom) >= nlen and bits.next == last_byte + 1 then
+					bits.append(oits.fast_cstring(oifrom), olen)
+					var ret = new FlatString.full(mits, nlen, mifrom, _length + o._length)
+					ret.buff_items = bits
+					ret.has_buff = true
+					return ret
+				end
+			end
+			var nlenpow2 = nlen.next_pow2
+			var nns = new BufferedNativeString(nlenpow2)
+			nns.append(mits.fast_cstring(mifrom), mlen)
+			nns.append(oits.fast_cstring(oifrom), olen)
+			var ret = new FlatString.full(nns.items, nlen, 0, _length + o._length)
+			ret.buff_items = nns
+			ret.has_buff = true
+			return ret
+		else if o isa Concat then
+			var ol = o._left
+			var ollen = ol.bytelen
+			if ollen + mlen > maxlen then return new Concat(self, o)
+			return new Concat(self + ol, o._right)
 		else
 			abort
 		end

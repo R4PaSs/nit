@@ -103,6 +103,7 @@ redef class MClassType
 		if name == "Int32" then return "int32_t"
 		if name == "UInt32" then return "uint32_t"
 		if name == "NativeString" then return "char*"
+		if name == "BufferedNativeString" then return "nit_string*"
 		if mclass.kind == extern_kind then
 			var ctype = mclass.ctype
 			assert ctype != null
@@ -124,6 +125,7 @@ redef class MClassType
 		if name == "Int32" then return "int32_t"
 		if name == "UInt32" then return "uint32_t"
 		if name == "NativeString" then return "char*"
+		if name == "BufferedNativeString" then return "nit_string*"
 		if mclass.kind == extern_kind then return "void*"
 		return super
 	end
@@ -131,7 +133,7 @@ redef class MClassType
 	redef fun mangled_cname do return mclass.name
 
 	redef fun is_cprimitive do return mclass.kind == extern_kind or
-			(once ["Bool", "Char", "Float", "Int", "NativeString",
+			(once ["Bool", "Char", "Float", "Int", "NativeString", "BufferedNativeString",
 			       "Byte", "Int8", "Int16", "UInt16", "Int32", "UInt32"]).has(mclass.name)
 end
 
