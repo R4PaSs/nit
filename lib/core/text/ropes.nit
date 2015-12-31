@@ -241,7 +241,7 @@ private class Concat
 	end
 
 	# Returns a balanced version of `self`
-	fun balance: String do
+	redef fun balance: String do
 		var children = new Array[String]
 		var rnod: String
 		var iter: nullable RopeCharIteratorPiece = new RopeCharIteratorPiece(self, false, false, null)

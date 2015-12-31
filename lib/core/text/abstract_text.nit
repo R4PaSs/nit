@@ -1170,6 +1170,9 @@ abstract class String
 
 	redef fun to_s do return self
 
+	# Returns a balanced version of `self`
+	fun balance: String do return self
+
 	# Concatenates `o` to `self`
 	#
 	#     assert "hello" + "world"  == "helloworld"
