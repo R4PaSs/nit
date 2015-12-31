@@ -15,7 +15,7 @@ module bench_base
 fun prepare_string(strlen: Int): String do
 	var s = "a"
 	for i in [1 .. strlen[ do s += "a"
-	return s
+	return s.balance
 end
 
 # Prepares a buffer to be used in a bench
