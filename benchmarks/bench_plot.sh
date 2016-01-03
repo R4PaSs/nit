@@ -124,9 +124,9 @@ function prepare_res_lines()
 	fi
 	res=$1
 	if [ "$plots" = "" ]; then
-		plots="plot '$1' using 4 with lines ti '$2'"
+		plots="plot '$1' using 4:xticlabels(5) with lines ti '$2'"
 	else
-		plots="$plots, '$1' using 4 with lines ti '$2'"
+		plots="$plots, '$1' using 4:xticlabels(5) with lines ti '$2'"
 	fi
 	if [ "$dry_run" = "true" ]; then return; fi
 	echo "# [$2] $3 ; count=$count" > "$res"
