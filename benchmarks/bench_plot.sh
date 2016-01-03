@@ -81,7 +81,7 @@ function prepare_res()
 function plot()
 {
 	cat >"$1" <<END
-set terminal pdf color enhanced font "Helvetica,12"
+set terminal pdf color enhanced font "Helvetica,8"
 set output '$1.pdf'
 set auto x;
 set yrange [0:];
