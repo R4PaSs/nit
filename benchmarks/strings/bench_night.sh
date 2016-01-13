@@ -52,5 +52,7 @@ function bench_maxlen()
 	mv out/iteration out/iteration_maxlen
 }
 
-bench_regular
-bench_maxlen
+#bench_regular
+#bench_maxlen
+
+./bench_memoire.sh --maxlen substring 1000000
