@@ -32,8 +32,9 @@ redef class App
 	fun generate_world: World
 	do
 		var world = new World
-		world.player = new Player(new Point3d[Float](0.0, 100.0, 0.0), 8.0, 32.0,
+		world.player = new Player(new Point3d[Float](0.0, 20.0, 0.0), 4.0, 4.0,
 			new Weapon(1.0, 1.0))
+		world.planes.add new Platform(new Point3d[Float](0.0, 10.0, 0.0), 16.0, 4.0)
 		return world
 	end
 
@@ -42,7 +43,7 @@ redef class App
 		super
 
 		# Move the camera to show all the world world in the screen range
-		world_camera.reset_height(800.0)
+		world_camera.reset_height(40.0)
 	end
 
 	redef fun update(dt)
@@ -106,6 +107,7 @@ end
 
 redef class Platform
 	redef var sprite = new Sprite(app.plane_texture, center) is lazy
+	init do sprite.scale = width/sprite.texture.width
 end
 
 redef class Ennemy
@@ -114,5 +116,5 @@ end
 
 redef class Player
 	redef var sprite = new Sprite(app.player_texture, center) is lazy
-	init do sprite.scale = 0.2
+	init do sprite.scale = width/sprite.texture.width * 2.0
 end

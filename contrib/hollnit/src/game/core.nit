@@ -23,6 +23,9 @@ class World
 
 	var boss_altitude = 10000.0
 
+	# Runtime of this game
+	var t = 0.0
+
 	fun camera_view: Box[Float]
 	do
 		# TODO update from client
@@ -41,11 +44,13 @@ class World
 
 	fun update(dt: Float)
 	do
-		for plane in planes do plane.update dt
-		for ennemy in ennemies do ennemy.update dt
+		t += dt
+
+		for plane in planes do plane.update(dt, self)
+		for ennemy in ennemies do ennemy.update(dt, self)
 
 		var player = player
-		if player != null then player.update dt
+		if player != null then player.update(dt, self)
 	end
 end
 
@@ -73,16 +78,13 @@ abstract class Body
 
 	fun affected_by_gravity: Bool do return true
 
-	fun update(dt: Float)
+	fun update(dt: Float, world: World)
 	do
-		if affected_by_gravity then inertia.y -= 10.0
+		if affected_by_gravity then inertia.y -= 4.0
 
 		center.x += dt * inertia.x
 		center.y += dt * inertia.y
 		center.z += dt * inertia.z
-
-		print affected_by_gravity
-		print inertia.y
 
 		# Hit the gorund
 		# TODO damage/die
@@ -104,8 +106,8 @@ abstract class Body
 		inertia.y += force / dy
 	end
 
-	redef fun top do return center.y - height / 2.0
-	redef fun bottom do return center.y + height / 2.0
+	redef fun top do return center.y + height / 2.0
+	redef fun bottom do return center.y - height / 2.0
 	redef fun left do return center.x - width / 2.0
 	redef fun right do return center.x + width / 2.0
 end
@@ -126,7 +128,9 @@ abstract class Human
 	var moving = 0.0 is writable
 
 	# `moving` speed
-	var speed = 5.0
+	var walking_speed = 20.0
+
+	var freefall_accel = 50.0
 
 	# On which plane? if any
 	var plane: nullable Platform = null
@@ -137,9 +141,56 @@ abstract class Human
 	# Apply a jump from input
 	fun jump
 	do
-		# TODO if plane != null then
-		#	plane = null
-		inertia.y += 200.0
+		if plane != null then
+			# On solid plane, jump
+			inertia.y += 80.0
+			plane = null
+
+			inertia.x = moving * 24.0
+		end
+	end
+
+	redef fun update(dt, world)
+	do
+		var on_plane = plane
+		if on_plane != null then
+			# On a plane, applying special physics do not call super!
+
+			# Precise movements
+			center.x += moving * walking_speed * dt
+
+			# Detect fall
+
+			if not (plane.left < right and plane.right > left) then
+				self.plane = null
+			end
+		else
+			# Freefall
+
+			# Only influence the inertia
+			inertia.x += moving * freefall_accel * dt
+
+			var old_y = bottom
+			super
+
+			# Detect collision with planes
+			for plane in world.planes do # TODO optimize with quad tree
+				if plane.left < right and plane.right > left then
+					if old_y > plane.top and bottom <= plane.top then
+						# Landed on a plane
+						self.plane = plane
+						inertia.x = 0.0
+						inertia.y = 0.0
+						center.y = plane.top + height / 2.0
+						break
+					end
+				end
+			end
+		end
+
+		if center.y == 0.0 then
+			is_alive = false
+		end
 	end
 end
 
