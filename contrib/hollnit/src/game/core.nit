@@ -75,20 +75,33 @@ abstract class Body
 
 	fun update(dt: Float)
 	do
+		if affected_by_gravity then inertia.y -= 10.0
+
 		center.x += dt * inertia.x
 		center.y += dt * inertia.y
 		center.z += dt * inertia.z
 
-		if affected_by_gravity then inertia.y -= 0.1
+		print affected_by_gravity
+		print inertia.y
 
 		# Hit the gorund
 		# TODO damage/die
-		if center.y < 0.0 then center.y = 0.0
+		if center.y < 0.0 then
+			center.y = 0.0
+			inertia.y = 0.0
+		end
 	end
 
 	fun apply_force(origin: Point3d[Float], force: Float)
 	do
 		var dx = center.x - origin.x
+		var dy = center.y - origin.y
+
+		var d2 = dx*dx + dy*dy
+		#TODO if d2 > ? then return
+
+		inertia.x += force / dy
+		inertia.y += force / dy
 	end
 
 	redef fun top do return center.y - height / 2.0
@@ -110,7 +123,7 @@ abstract class Human
 	super Body
 
 	# Input direction in `[-1.0 .. 1.0]`
-	var moving = 0.0
+	var moving = 0.0 is writable
 
 	# `moving` speed
 	var speed = 5.0
@@ -124,9 +137,9 @@ abstract class Human
 	# Apply a jump from input
 	fun jump
 	do
-		inertia.y += 20.0
-
-		print "jump"
+		# TODO if plane != null then
+		#	plane = null
+		inertia.y += 200.0
 	end
 end
 

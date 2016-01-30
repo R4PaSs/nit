@@ -23,7 +23,7 @@ redef class App
 
 	var plane_texture = new Texture("textures/plane.png")
 	var ennemy_texture = new Texture("textures/ennemy.png")
-	var player_texture = new Texture("textures/player.png")
+	var player_texture = new Texture("textures/player/run-cycle-inked2_xcf-Frame_01__100ms___replace_.png")
 
 	var low_background_texture = new Texture("textures/low_background.png")
 
@@ -32,7 +32,7 @@ redef class App
 	fun generate_world: World
 	do
 		var world = new World
-		world.player = new Player(new Point3d[Float](0.0, 0.0, 0.0), 8.0, 32.0,
+		world.player = new Player(new Point3d[Float](0.0, 100.0, 0.0), 8.0, 32.0,
 			new Weapon(1.0, 1.0))
 		return world
 	end
@@ -55,26 +55,42 @@ redef class App
 		var player_pos = if player != null then player.center else new Point3d[Float](0.0, 0.0, 0.0)
 		var altitude = player_pos.y
 		var p = altitude / world.boss_altitude
-		glClearColor(0.0, 0.0, 1.0-p, 1.0)
+		var ip = 1.0 - p
+		glClearColor(0.3*ip, 0.3*ip, ip, 1.0)
 
 		# Move camera
-		world_camera.position.x = player_pos.x
-		world_camera.position.y = player_pos.y
+		#world_camera.position.x = player_pos.x
+		#world_camera.position.y = player_pos.y
 	end
+
+	private var keys_left = new Array[String].with_items("left", "a")
+	private var keys_right = new Array[String].with_items("right", "d")
 
 	redef fun accept_event(event)
 	do
 		if event isa QuitEvent then
 			exit 0
-		else if event isa KeyEvent and event.is_down then
-
-			if event.name == "space" then
-				var player = world.player
-				if player != null then player.jump
+		else if event isa KeyEvent then
+			if event.name == "escape" and event.is_down then
+				exit 0
 			end
 
-			if event.name == "escape" then
-				exit 0
+			var player = world.player
+			if player != null then
+
+				if event.name == "space" and event.is_down then
+					player.jump
+				end
+
+				if keys_left.has(event.name) then
+					var mod = if event.is_down then -1.0 else 1.0
+					player.moving += mod
+				end
+
+				if keys_right.has(event.name) then
+					var mod = if event.is_down then 1.0 else -1.0
+					player.moving += mod
+				end
 			end
 		end
 
@@ -98,4 +114,5 @@ end
 
 redef class Player
 	redef var sprite = new Sprite(app.player_texture, center) is lazy
+	init do sprite.scale = 0.2
 end
