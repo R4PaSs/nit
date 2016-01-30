@@ -39,11 +39,11 @@ redef class App
 	# ---
 	# Particle effects
 
-	# Explosion image for particle effect
-	private var texture_explosion = new Texture("particles/explosion00.png")
-
 	# Explosion particle system
-	var explosions = new ParticleSystem(20, explosion_program, texture_explosion)
+	var explosions = new ParticleSystem(20, explosion_program,
+		new Texture("particles/explosion00.png"))
+	var blood = new ParticleSystem(20, explosion_program,
+		new Texture("particles/blood07.png"))
 
 	# ---
 	# Sound effects
@@ -118,7 +118,7 @@ redef class App
 				a = 0.25 * pi
 			end
 
-			if a != inf then
+			if a != inf and player != null then
 				player.shoot(a, world)
 			end
 		end
