@@ -19,6 +19,10 @@ class World
 
 	var ennemies = new Array[Ennemy]
 
+	var ennemy_bullets = new Array[Bullet]
+
+	var player_bullets = new Array[Bullet]
+
 	var player: nullable Player = null is writable
 
 	var boss_altitude = 10000.0
@@ -41,11 +45,14 @@ class World
 
 	fun update(dt: Float)
 	do
-		for plane in planes do plane.update dt
-		for ennemy in ennemies do ennemy.update dt
+		for plane in planes do plane.update(dt, self)
+		for ennemy in ennemies do ennemy.update(dt, self)
 
 		var player = player
-		if player != null then player.update dt
+		if player != null then player.update(dt, self)
+
+		for i in ennemy_bullets do i.update(dt, self)
+		for i in player_bullets do i.update(dt, self)
 	end
 end
 
@@ -73,7 +80,7 @@ abstract class Body
 
 	fun affected_by_gravity: Bool do return true
 
-	fun update(dt: Float)
+	fun update(dt: Float, world: World)
 	do
 		center.x += dt * inertia.x
 		center.y += dt * inertia.y
@@ -144,6 +151,24 @@ end
 
 class Weapon
 	var damage: Float
-
 	var cooldown: Float
+end
+
+class Bullet
+	super Body
+	var weapon: Weapon
+	var ennemies: Array[Body]
+	redef fun affected_by_gravity do return false
+	redef fun update(dt, world) do
+		super
+		for i in ennemies do if self.intersects(i)  then hit(i)
+	end
+	fun hit(body: Body) do body.health -= self.weapon.damage
+end
+
+
+class Ak47
+	super Weapon
+	redef var damage = 10.0
+	redef var cooldown = 0.5
 end
