@@ -15,16 +15,37 @@
 import geometry
 
 class World
-	var planes = new Array[Plane]
+	var planes = new Array[Platform]
 
-	var ennemies = new Array[Human]
+	var ennemies = new Array[Ennemy]
 
-	var player: nullable Human = null
+	var player: nullable Player = null is writable
 
-	var boss_height = 10000.0
+	var boss_altitude = 10000.0
+
+	fun camera_view: Box[Float]
+	do
+		# TODO update from client
+		var border = 100.0
+		var player = player
+		if player != null then
+			return new Box[Float](
+				player.center.x-border, player.center.x+border,
+				player.center.y+border, player.center.y-border)
+		else
+			return new Box[Float](
+				-border, border,
+				border, -border)
+		end
+	end
 
 	fun update(dt: Float)
 	do
+		for plane in planes do plane.update dt
+		for ennemy in ennemies do ennemy.update dt
+
+		var player = player
+		if player != null then player.update dt
 	end
 end
 
@@ -50,8 +71,19 @@ abstract class Body
 
 	fun max_health: Float do return 100.0
 
+	fun affected_by_gravity: Bool do return true
+
 	fun update(dt: Float)
 	do
+		center.x += dt * inertia.x
+		center.y += dt * inertia.y
+		center.z += dt * inertia.z
+
+		if affected_by_gravity then inertia.y -= 0.1
+
+		# Hit the gorund
+		# TODO damage/die
+		if center.y < 0.0 then center.y = 0.0
 	end
 
 	fun apply_force(origin: Point3d[Float], force: Float)
@@ -65,13 +97,16 @@ abstract class Body
 	redef fun right do return center.x + width / 2.0
 end
 
-class Plane
+# A plane
+class Platform
 	super Body
 
 	redef fun mass do return 100.0
+
+	redef fun affected_by_gravity do return false
 end
 
-class Human
+abstract class Human
 	super Body
 
 	# Input direction in `[-1.0 .. 1.0]`
@@ -81,7 +116,7 @@ class Human
 	var speed = 5.0
 
 	# On which plane? if any
-	var plane: nullable Plane = null
+	var plane: nullable Platform = null
 
 	# Equipped weapon
 	var weapon: Weapon
@@ -89,7 +124,18 @@ class Human
 	# Apply a jump from input
 	fun jump
 	do
+		inertia.y += 20.0
+
+		print "jump"
 	end
+end
+
+class Player
+	super Human
+end
+
+class Ennemy
+	super Human
 end
 
 class Powerup
