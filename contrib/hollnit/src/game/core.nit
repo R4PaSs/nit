@@ -127,7 +127,8 @@ abstract class Body
 	end
 
 	fun hit(value: Float) do self.health -= value
-
+	fun destroy(world: World) do end
+	
 	redef fun top do return center.y + height / 2.0
 	redef fun bottom do return center.y - height / 2.0
 	redef fun left do return center.x - width / 2.0
@@ -218,16 +219,17 @@ end
 
 class Player
 	super Human
-
+	
 	fun shoot(angle: Float, world: World) do
+		if world.t - weapon.last_shot < weapon.cooldown then return
 		var x_inertia = angle.cos * weapon.power
 		var y_inertia = angle.sin * weapon.power
-		var new_center = new Point3d[Float](self.center.x, self.center.y, 0.0)
-		var bullet = new PlayerBullet(new_center, 2.0, 2.0, angle, self.weapon, world.planes, world.enemies)
+		var new_center = new Point3d[Float](self.center.x, self.center.y, self.center.z + 0.1)
+		var bullet = new PlayerBullet(new_center, 2.0, 2.0, angle, self.weapon, world.t,  world.planes, world.enemies)
 		bullet.inertia.x = self.inertia.x + x_inertia
 		bullet.inertia.y = self.inertia.y + y_inertia
-
 		world.player_bullets.add(bullet)
+		weapon.last_shot = world.t
 	end
 end
 
@@ -240,16 +242,26 @@ class Powerup
 end
 
 class Weapon
-	var damage: Float
-	var cooldown: Float
-	var power: Float
+	var last_shot: Float is writable, noinit
+	fun damage: Float is abstract
+	fun cooldown: Float is abstract
+	fun power: Float is abstract
+	fun bullet_lifespan: Float is abstract
 end
 
 class Bullet
 	super Body
 	var angle: Float
 	var weapon: Weapon
+	var creation_time: Float
+
 	redef fun affected_by_gravity do return false
+
+	redef fun update(dt, world) do
+		super
+		if world.t - creation_time >= weapon.bullet_lifespan then destroy(world)
+	end
+
 	fun hit_enemy(body: Body) do body.hit(self.weapon.damage)
 end
 
@@ -262,6 +274,11 @@ class PlayerBullet
 		for i in planes do if self.intersects(i) then hit_enemy(i)
 		for i in enemies do if self.intersects(i) then hit_enemy(i)
 	end
+
+	redef fun destroy(world) do
+		super
+		world.player_bullets.remove(self)
+	end
 end
 
 class EnemyBullet
@@ -271,6 +288,11 @@ class EnemyBullet
 		super
 		if self.intersects(player) then hit_enemy(player)
 	end
+
+	redef fun destroy(world) do
+		super
+		world.enemy_bullets.remove(self)
+	end
 end
 
 
@@ -279,4 +301,5 @@ class Ak47
 	redef var damage = 10.0
 	redef var cooldown = 0.5
 	redef var power = 10.0
+	redef var bullet_lifespan = 3.0
 end
