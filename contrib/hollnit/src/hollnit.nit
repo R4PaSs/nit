@@ -57,6 +57,9 @@ redef class App
 			new Ak47)
 		world.planes.add new Platform(new Point3d[Float](0.0, 10.0, 0.0), 16.0, 4.0)
 		world.planes.add new Platform(new Point3d[Float](20.0, 22.0, 0.0), 16.0, 4.0)
+
+		# Ground
+		world.planes.add new Platform(new Point3d[Float](0.0, -80.0, 0.0), 200.0, 161.0)
 		return world
 	end
 
@@ -116,6 +119,12 @@ redef class App
 				a = 0.50 * pi
 			else if key == "e" then
 				a = 0.25 * pi
+			else if key == "z" then
+				a = 1.25 * pi
+			else if key == "x" then
+				a = 1.50 * pi
+			else if key == "c" then
+				a = 1.75 * pi
 			end
 
 			if a != inf and player != null then
@@ -166,6 +175,12 @@ redef class Body
 	fun sprite: Sprite is abstract
 
 	init do app.sprites.add sprite
+
+	redef fun destroy(world)
+	do
+		super
+		app.sprites.remove sprite
+	end
 end
 
 redef class Platform
@@ -218,4 +233,10 @@ end
 redef class Float
 	# Fuzzy value in `[self-variation..self+variation]`
 	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
+end
+
+class Animation
+	super Sprite
+
+	#redef fun sprite
 end

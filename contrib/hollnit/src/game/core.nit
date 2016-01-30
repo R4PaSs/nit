@@ -50,8 +50,8 @@ class World
 	do
 		t += dt
 
-		for plane in planes do plane.update(dt, self)
-		for enemy in enemies do enemy.update(dt, self)
+		for plane in planes.reverse_iterator do plane.update(dt, self)
+		for enemy in enemies.reverse_iterator do enemy.update(dt, self)
 
 		var player = player
 		if player != null then player.update(dt, self)
@@ -108,7 +108,7 @@ abstract class Body
 
 		# Hit the gorund
 		# TODO damage/die
-		if bottom <= 0.0 then
+		if bottom <= 0.0 and affected_by_gravity then
 			center.y = height / 2.0
 			inertia.y = 0.0
 		end
@@ -128,7 +128,7 @@ abstract class Body
 
 	fun hit(value: Float) do self.health -= value
 	fun destroy(world: World) do end
-	
+
 	redef fun top do return center.y + height / 2.0
 	redef fun bottom do return center.y - height / 2.0
 	redef fun left do return center.x - width / 2.0
@@ -153,7 +153,7 @@ abstract class Human
 	# `moving` speed
 	var walking_speed = 20.0
 
-	var freefall_accel = 50.0
+	var freefall_accel = 100.0
 
 	# On which plane? if any
 	var plane: nullable Platform = null
