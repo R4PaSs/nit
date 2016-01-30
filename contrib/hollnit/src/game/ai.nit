@@ -16,13 +16,11 @@ redef class Ennemy
 
 	fun shoot(world: World, target: Point3d[Float]) do
 		var angle = self.center.atan2(target)
-		var x_inertia = angle.cos * 10.0
-		var y_inertia = angle.sin * 10.0
-		var ennemies = new Array[Body].with_items(world.player.as(not null))
-		var bullet = new Bullet(self.center, 2.0, 2.0, self.weapon, ennemies)
+		var x_inertia = angle.cos * weapon.power
+		var y_inertia = angle.sin * weapon.power
+		var bullet = new EnnemyBullet(self.center, 2.0, 2.0, angle, self.weapon, world.player.as(not null))
 		bullet.inertia.x = self.inertia.x + x_inertia
 		bullet.inertia.y = self.inertia.y + y_inertia
-		bullet.inertia.z = self.inertia.z
 		world.ennemy_bullets.add(bullet)
 	end
 end

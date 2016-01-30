@@ -113,6 +113,8 @@ abstract class Body
 		inertia.y += force / dy
 	end
 
+	fun hit(value: Float) do self.health -= value
+
 	redef fun top do return center.y + height / 2.0
 	redef fun bottom do return center.y - height / 2.0
 	redef fun left do return center.x - width / 2.0
@@ -203,6 +205,16 @@ end
 
 class Player
 	super Human
+
+	fun shoot(angle: Float, world: World) do
+		var x_inertia = angle.cos * weapon.power
+		var y_inertia = angle.sin * weapon.power
+		var bullet = new PlayerBullet(self.center, 2.0, 2.0, angle, self.weapon, world.planes, world.ennemies)
+		bullet.inertia.x = self.inertia.x + x_inertia
+		bullet.inertia.y = self.inertia.y + y_inertia
+
+		world.player_bullets.add(bullet)
+	end
 end
 
 class Ennemy
@@ -216,18 +228,35 @@ end
 class Weapon
 	var damage: Float
 	var cooldown: Float
+	var power: Float
 end
 
 class Bullet
 	super Body
+	var angle: Float
 	var weapon: Weapon
-	var ennemies: Array[Body]
 	redef fun affected_by_gravity do return false
+	fun hit_ennemy(body: Body) do body.hit(self.weapon.damage)
+end
+
+class PlayerBullet
+	super Bullet
+	var planes: Array[Platform]
+	var ennemies: Array[Ennemy]
 	redef fun update(dt, world) do
 		super
-		for i in ennemies do if self.intersects(i)  then hit(i)
+		for i in planes do if self.intersects(i) then hit_ennemy(i)
+		for i in ennemies do if self.intersects(i) then hit_ennemy(i)
 	end
-	fun hit(body: Body) do body.health -= self.weapon.damage
+end
+
+class EnnemyBullet
+	super Bullet
+	var player: Player
+	redef fun update(dt, world) do
+		super
+		if self.intersects(player) then hit_ennemy(player)
+	end
 end
 
 
@@ -235,4 +264,5 @@ class Ak47
 	super Weapon
 	redef var damage = 10.0
 	redef var cooldown = 0.5
+	redef var power = 10.0
 end
