@@ -100,7 +100,7 @@ redef class App
 			end
 
 			if a != inf then
-				#player.shoot(a, world)
+				player.shoot(a, world)
 			end
 		end
 	end
@@ -173,7 +173,7 @@ end
 redef class Bullet
 	redef var sprite = new Sprite(app.bullet_texture, center) is lazy
 	init do
-		sprite.scale = 20.0
+		sprite.scale = 0.5
 		sprite.rotation = angle
 	end
 end

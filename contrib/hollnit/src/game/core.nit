@@ -222,7 +222,8 @@ class Player
 	fun shoot(angle: Float, world: World) do
 		var x_inertia = angle.cos * weapon.power
 		var y_inertia = angle.sin * weapon.power
-		var bullet = new PlayerBullet(self.center, 2.0, 2.0, angle, self.weapon, world.planes, world.ennemies)
+		var new_center = new Point3d[Float](self.center.x, self.center.y, 0.0)
+		var bullet = new PlayerBullet(new_center, 2.0, 2.0, angle, self.weapon, world.planes, world.ennemies)
 		bullet.inertia.x = self.inertia.x + x_inertia
 		bullet.inertia.y = self.inertia.y + y_inertia
 
