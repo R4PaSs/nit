@@ -226,8 +226,8 @@ class Player
 		var y_inertia = angle.sin * weapon.power
 		var new_center = new Point3d[Float](self.center.x, self.center.y, self.center.z + 0.1)
 		var bullet = new PlayerBullet(new_center, 2.0, 2.0, angle, self.weapon, world.t,  world.planes, world.enemies)
-		bullet.inertia.x = self.inertia.x + x_inertia
-		bullet.inertia.y = self.inertia.y + y_inertia
+		bullet.inertia.x = x_inertia
+		bullet.inertia.y = y_inertia
 		world.player_bullets.add(bullet)
 		weapon.last_shot = world.t
 	end
@@ -271,8 +271,14 @@ class PlayerBullet
 	var enemies: Array[Enemy]
 	redef fun update(dt, world) do
 		super
-		for i in planes do if self.intersects(i) then hit_enemy(i)
-		for i in enemies do if self.intersects(i) then hit_enemy(i)
+		for i in planes do if self.intersects(i) then
+			hit_enemy(i)
+			destroy(world)
+		end
+		for i in enemies do if self.intersects(i) then
+			hit_enemy(i)
+			destroy(world)
+		end
 	end
 
 	redef fun destroy(world) do
@@ -286,7 +292,10 @@ class EnemyBullet
 	var player: Player
 	redef fun update(dt, world) do
 		super
-		if self.intersects(player) then hit_enemy(player)
+		if self.intersects(player) then 
+			hit_enemy(player)
+			destroy(world)
+		end
 	end
 
 	redef fun destroy(world) do
@@ -299,7 +308,7 @@ end
 class Ak47
 	super Weapon
 	redef var damage = 10.0
-	redef var cooldown = 0.5
-	redef var power = 10.0
+	redef var cooldown = 0.1
+	redef var power = 50.0
 	redef var bullet_lifespan = 3.0
 end
