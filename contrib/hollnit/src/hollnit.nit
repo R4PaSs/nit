@@ -15,19 +15,37 @@
 module hollnit
 
 import gamnit::depth
+import gamnit::keys
+import gamnit::limit_fps
 
 import game
 
 redef class App
-	#private var fx_fire = new Sound("sounds/fire.mp3")
+
+	# Game world
+	var world: World = generate_world is lazy
 
 	var plane_texture = new Texture("textures/plane.png")
 	var ennemy_texture = new Texture("textures/ennemy.png")
-	var player_texture = new Texture("textures/player/run-cycle-inked2_xcf-Frame_01__100ms___replace_.png")
+	var player_textures: Array[Texture] =
+		[for f in [1..12] do new Texture("textures/player/run-cycle-inked2_xcf-Frame_{f.pad(2)}__100ms___replace_.png")]
+	var bullet_texture = new CheckerTexture
 
 	var low_background_texture = new Texture("textures/low_background.png")
 
-	var world: World = generate_world is lazy
+	# ---
+	# Particle effects
+
+	# Explosion image for particle effect
+	private var texture_explosion = new Texture("particles/explosion00.png")
+
+	# Explosion particle system
+	var explosions = new ParticleSystem(20, explosion_program, texture_explosion)
+
+	# ---
+	# Sound effects
+
+	#private var fx_fire = new Sound("sounds/fire.mp3")
 
 	fun generate_world: World
 	do
@@ -35,6 +53,7 @@ redef class App
 		world.player = new Player(new Point3d[Float](0.0, 20.0, 0.0), 4.0, 4.0,
 			new Weapon(1.0, 1.0))
 		world.planes.add new Platform(new Point3d[Float](0.0, 10.0, 0.0), 16.0, 4.0)
+		world.planes.add new Platform(new Point3d[Float](20.0, 22.0, 0.0), 16.0, 4.0)
 		return world
 	end
 
@@ -44,6 +63,8 @@ redef class App
 
 		# Move the camera to show all the world world in the screen range
 		world_camera.reset_height(40.0)
+
+		particle_systems.add explosions
 	end
 
 	redef fun update(dt)
@@ -62,13 +83,32 @@ redef class App
 		# Move camera
 		#world_camera.position.x = player_pos.x
 		#world_camera.position.y = player_pos.y
-	end
 
-	private var keys_left = new Array[String].with_items("left", "a")
-	private var keys_right = new Array[String].with_items("right", "d")
+		# Try to fire as long as a key is pressed
+		for key in pressed_keys do
+			var a = inf
+			if key == "a" then
+				a = pi
+			else if key == "d" then
+				a = 0.0
+			else if key == "q" then
+				a = 0.75 * pi
+			else if key == "w" then
+				a = 0.50 * pi
+			else if key == "e" then
+				a = 0.25 * pi
+			end
+
+			if a != inf then
+				#player.shoot(a, world)
+			end
+		end
+	end
 
 	redef fun accept_event(event)
 	do
+		var s = super
+
 		if event isa QuitEvent then
 			exit 0
 		else if event isa KeyEvent then
@@ -83,19 +123,30 @@ redef class App
 					player.jump
 				end
 
-				if keys_left.has(event.name) then
+				if event.name == "left" then
 					var mod = if event.is_down then -1.0 else 1.0
 					player.moving += mod
 				end
 
-				if keys_right.has(event.name) then
+				if event.name == "right" then
 					var mod = if event.is_down then 1.0 else -1.0
 					player.moving += mod
 				end
 			end
 		end
 
-		return false
+		if event isa PointerEvent and event.depressed then
+		# Particles
+		var pos = new Point3d[Float](0.0, 0.0, 0.0)
+		app.explosions.add(new Point3d[Float](pos.x, 1.0, pos.y), 4096.0, 0.3)
+		for i in 8.times do
+			app.explosions.add(
+				new Point3d[Float](pos.x & 1.0, 1.0 & 1.0, pos.y & 1.0),
+				2048.0 & 1024.0, 0.3 & 0.1)
+		end
+		end
+
+		return s
 	end
 end
 
@@ -115,6 +166,33 @@ redef class Ennemy
 end
 
 redef class Player
-	redef var sprite = new Sprite(app.player_texture, center) is lazy
+	redef var sprite = new Sprite(app.player_textures.rand, center) is lazy
 	init do sprite.scale = width/sprite.texture.width * 2.0
+end
+
+redef class Bullet
+	redef var sprite = new Sprite(app.bullet_texture, center) is lazy
+	init do
+		sprite.scale = 20.0
+		sprite.rotation = angle
+	end
+end
+
+redef class World
+end
+
+redef class Int
+	# Pad a number with `0`s on the left side to reach `size` digits
+	private fun pad(size: Int): String
+	do
+		var s = to_s
+		var d = size - s.length
+		if d < 0 then s = "0"*d + s
+		return s
+	end
+end
+
+redef class Float
+	# Fuzzy value in `[self-variation..self+variation]`
+	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
 end

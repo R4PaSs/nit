@@ -59,6 +59,19 @@ class World
 		for i in ennemy_bullets do i.update(dt, self)
 		for i in player_bullets do i.update(dt, self)
 	end
+
+	fun explode(center: Point3d[Float], force: Float)
+	do
+		var lists = [planes, ennemies: Sequence[Body]]
+		var player = player
+		if player != null then lists.add([player])
+
+		for l in lists do
+			for body in l do
+				body.apply_force(center, force)
+			end
+		end
+	end
 end
 
 abstract class Body
@@ -109,8 +122,8 @@ abstract class Body
 		var d2 = dx*dx + dy*dy
 		#TODO if d2 > ? then return
 
-		inertia.x += force / dy
-		inertia.y += force / dy
+		inertia.x += force / dx / mass
+		inertia.y += force / dy / mass
 	end
 
 	redef fun top do return center.y + height / 2.0
