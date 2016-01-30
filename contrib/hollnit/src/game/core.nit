@@ -17,9 +17,9 @@ import geometry
 class World
 	var planes = new Array[Platform]
 
-	var ennemies = new Array[Ennemy]
+	var enemies = new Array[Enemy]
 
-	var ennemy_bullets = new Array[Bullet]
+	var enemy_bullets = new Array[Bullet]
 
 	var player_bullets = new Array[Bullet]
 
@@ -51,18 +51,18 @@ class World
 		t += dt
 
 		for plane in planes do plane.update(dt, self)
-		for ennemy in ennemies do ennemy.update(dt, self)
+		for enemy in enemies do enemy.update(dt, self)
 
 		var player = player
 		if player != null then player.update(dt, self)
 
-		for i in ennemy_bullets do i.update(dt, self)
-		for i in player_bullets do i.update(dt, self)
+		for i in enemy_bullets.reverse_iterator do i.update(dt, self)
+		for i in player_bullets.reverse_iterator do i.update(dt, self)
 	end
 
 	fun explode(center: Point3d[Float], force: Float)
 	do
-		var lists = [planes, ennemies: Sequence[Body]]
+		var lists = [planes, enemies: Sequence[Body]]
 		var player = player
 		if player != null then lists.add([player])
 
@@ -108,8 +108,8 @@ abstract class Body
 
 		# Hit the gorund
 		# TODO damage/die
-		if center.y < 0.0 then
-			center.y = 0.0
+		if bottom <= 0.0 then
+			center.y = height / 2.0
 			inertia.y = 0.0
 		end
 	end
@@ -210,7 +210,7 @@ abstract class Human
 			end
 		end
 
-		if center.y == 0.0 then
+		if bottom == 0.0 then
 			is_alive = false
 		end
 	end
@@ -222,7 +222,7 @@ class Player
 	fun shoot(angle: Float, world: World) do
 		var x_inertia = angle.cos * weapon.power
 		var y_inertia = angle.sin * weapon.power
-		var bullet = new PlayerBullet(self.center, 2.0, 2.0, angle, self.weapon, world.planes, world.ennemies)
+		var bullet = new PlayerBullet(self.center, 2.0, 2.0, angle, self.weapon, world.planes, world.enemies)
 		bullet.inertia.x = self.inertia.x + x_inertia
 		bullet.inertia.y = self.inertia.y + y_inertia
 
@@ -230,7 +230,7 @@ class Player
 	end
 end
 
-class Ennemy
+class Enemy
 	super Human
 end
 
@@ -249,26 +249,26 @@ class Bullet
 	var angle: Float
 	var weapon: Weapon
 	redef fun affected_by_gravity do return false
-	fun hit_ennemy(body: Body) do body.hit(self.weapon.damage)
+	fun hit_enemy(body: Body) do body.hit(self.weapon.damage)
 end
 
 class PlayerBullet
 	super Bullet
 	var planes: Array[Platform]
-	var ennemies: Array[Ennemy]
+	var enemies: Array[Enemy]
 	redef fun update(dt, world) do
 		super
-		for i in planes do if self.intersects(i) then hit_ennemy(i)
-		for i in ennemies do if self.intersects(i) then hit_ennemy(i)
+		for i in planes do if self.intersects(i) then hit_enemy(i)
+		for i in enemies do if self.intersects(i) then hit_enemy(i)
 	end
 end
 
-class EnnemyBullet
+class EnemyBullet
 	super Bullet
 	var player: Player
 	redef fun update(dt, world) do
 		super
-		if self.intersects(player) then hit_ennemy(player)
+		if self.intersects(player) then hit_enemy(player)
 	end
 end
 

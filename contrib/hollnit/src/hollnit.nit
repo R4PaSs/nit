@@ -26,12 +26,15 @@ redef class App
 	var world: World = generate_world is lazy
 
 	var plane_texture = new Texture("textures/plane.png")
-	var ennemy_texture = new Texture("textures/ennemy.png")
+	var enemy_texture = new Texture("textures/enemy.png")
 	var player_textures: Array[Texture] =
 		[for f in [1..12] do new Texture("textures/player/run-cycle-inked2_xcf-Frame_{f.pad(2)}__100ms___replace_.png")]
-	var bullet_texture = new CheckerTexture
+	var bullet_texture = new Texture("textures/bullet.png")
 
 	var low_background_texture = new Texture("textures/low_background.png")
+
+	# Ground
+	private var ground_texture = new Texture("textures/fastgras01.png")
 
 	# ---
 	# Particle effects
@@ -64,7 +67,23 @@ redef class App
 		# Move the camera to show all the world world in the screen range
 		world_camera.reset_height(40.0)
 
+		# Register particle systems
 		particle_systems.add explosions
+
+		# Setup ground
+		# TODO we may need to move this plane if the player goes far from the center
+		var ground_mesh = new Plane
+		ground_mesh.repeat_x = 100.0
+		ground_mesh.repeat_y = 100.0
+
+		var ground_material = new TexturedMaterial(
+			[0.0, 0.1, 0.0, 1.0], [0.4, 0.4, 0.4, 1.0], [0.0]*4)
+		ground_material.diffuse_texture = ground_texture
+
+		var ground_model = new LeafModel(ground_mesh, ground_material)
+		var ground = new Actor(ground_model, new Point3d[Float](0.0, 0.0, 0.0))
+		ground.scale = 5000.0
+		actors.add ground
 	end
 
 	redef fun update(dt)
@@ -82,7 +101,7 @@ redef class App
 
 		# Move camera
 		#world_camera.position.x = player_pos.x
-		#world_camera.position.y = player_pos.y
+		world_camera.position.y = player_pos.y + 5.0
 
 		# Try to fire as long as a key is pressed
 		for key in pressed_keys do
@@ -100,7 +119,7 @@ redef class App
 			end
 
 			if a != inf then
-				#player.shoot(a, world)
+				player.shoot(a, world)
 			end
 		end
 	end
@@ -119,7 +138,7 @@ redef class App
 			var player = world.player
 			if player != null then
 
-				if event.name == "space" and event.is_down then
+				if (event.name == "space" or event.name == "up") and event.is_down then
 					player.jump
 				end
 
@@ -136,14 +155,7 @@ redef class App
 		end
 
 		if event isa PointerEvent and event.depressed then
-		# Particles
-		var pos = new Point3d[Float](0.0, 0.0, 0.0)
-		app.explosions.add(new Point3d[Float](pos.x, 1.0, pos.y), 4096.0, 0.3)
-		for i in 8.times do
-			app.explosions.add(
-				new Point3d[Float](pos.x & 1.0, 1.0 & 1.0, pos.y & 1.0),
-				2048.0 & 1024.0, 0.3 & 0.1)
-		end
+			world.explode(new Point3d[Float](0.0, 0.0, 0.0), 16.0)
 		end
 
 		return s
@@ -161,8 +173,8 @@ redef class Platform
 	init do sprite.scale = width/sprite.texture.width
 end
 
-redef class Ennemy
-	redef var sprite = new Sprite(app.ennemy_texture, center) is lazy
+redef class Enemy
+	redef var sprite = new Sprite(app.enemy_texture, center) is lazy
 end
 
 redef class Player
@@ -179,6 +191,17 @@ redef class Bullet
 end
 
 redef class World
+
+	redef fun explode(center, force)
+	do
+		# Particles
+		app.explosions.add(new Point3d[Float](center.x, 1.0, center.y), 4096.0, 0.3)
+		for i in 8.times do
+			app.explosions.add(
+				new Point3d[Float](center.x & 1.0, 1.0 & 1.0, center.y & 1.0),
+				2048.0 & 1024.0, 0.3 & 0.1)
+			end
+	end
 end
 
 redef class Int
