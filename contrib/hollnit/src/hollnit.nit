@@ -185,7 +185,7 @@ end
 redef class Bullet
 	redef var sprite = new Sprite(app.bullet_texture, center) is lazy
 	init do
-		sprite.scale = 0.5
+		sprite.scale = 0.05
 		sprite.rotation = angle
 	end
 end
