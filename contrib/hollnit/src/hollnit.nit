@@ -51,7 +51,7 @@ redef class App
 	do
 		var world = new World
 		world.player = new Player(new Point3d[Float](0.0, 20.0, 0.0), 4.0, 4.0,
-			new Weapon(1.0, 1.0, 20.0))
+			new Ak47)
 		world.planes.add new Platform(new Point3d[Float](0.0, 10.0, 0.0), 16.0, 4.0)
 		world.planes.add new Platform(new Point3d[Float](20.0, 22.0, 0.0), 16.0, 4.0)
 		return world

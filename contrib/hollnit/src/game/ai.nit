@@ -18,7 +18,7 @@ redef class Ennemy
 		var angle = self.center.atan2(target)
 		var x_inertia = angle.cos * weapon.power
 		var y_inertia = angle.sin * weapon.power
-		var bullet = new EnnemyBullet(self.center, 2.0, 2.0, angle, self.weapon, world.player.as(not null))
+		var bullet = new EnnemyBullet(self.center, 2.0, 2.0, angle, self.weapon, world.t, world.player.as(not null))
 		bullet.inertia.x = self.inertia.x + x_inertia
 		bullet.inertia.y = self.inertia.y + y_inertia
 		world.ennemy_bullets.add(bullet)
