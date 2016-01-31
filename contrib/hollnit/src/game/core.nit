@@ -30,6 +30,8 @@ class World
 	# Runtime of this game
 	var t = 0.0
 
+	var score = 0
+
 	fun camera_view: Box[Float]
 	do
 		# TODO update from client
@@ -183,6 +185,7 @@ class Platform
 	do
 		super
 		world.explode(center, width)
+		world.score += 1
 	end
 
 	redef fun destroy(world)
@@ -424,6 +427,12 @@ abstract class Enemy
 	super Human
 
 	redef fun max_health do return 20.0
+
+	redef fun die(world)
+	do
+		super
+		world.score += 1
+	end
 
 	redef fun destroy(world)
 	do
