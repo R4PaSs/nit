@@ -9,12 +9,11 @@ bin/hollnit: $(shell ${NITLS} -M src/hollnit.nit linux) ${NITC} pre-build
 bin/texture_atlas_parser: src/texture_atlas_parser.nit
 	${NITC} src/texture_atlas_parser.nit -o $@
 
-#src/controls.nit: art/controls.svg
-	#make -C ../inkscape_tools/
-	#../inkscape_tools/bin/svg_to_png_and_nit art/controls.svg -a assets/ -s src/ -x 2.0 -g
+src/texts.nit: art/texts.svg
+	make -C ../inkscape_tools/
+	../inkscape_tools/bin/svg_to_png_and_nit art/texts.svg -a assets/ -s src/ -x 2.0 -g
 
-pre-build:
-	#src/controls.nit src/spritesheet_city.nit
+pre-build: src/texts.nit
 
 check: bin/hollnit
 	NIT_TESTING=true bin/hollnit

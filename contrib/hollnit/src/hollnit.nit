@@ -19,6 +19,7 @@ import gamnit::keys
 import gamnit::limit_fps
 
 import game
+import texts
 
 redef class App
 
@@ -76,6 +77,13 @@ redef class App
 
 	#private var fx_fire = new Sound("sounds/fire.mp3")
 
+	# ---
+	# UI
+	private var texts_sheet = new TextsImages
+
+	private var ui_tutorial_wasd: Texture = texts_sheet.tutorial_wasd
+	private var ui_respawn: Texture = texts_sheet.respawn
+
 	fun generate_world: World
 	do
 		var world = new World
@@ -108,6 +116,7 @@ redef class App
 
 		# Move the camera to show all the world world in the screen range
 		world_camera.reset_height(40.0)
+		ui_camera.reset_height(1080.0)
 
 		# Register particle systems
 		particle_systems.add explosions
@@ -261,6 +270,7 @@ redef class App
 
 			if player != null and not player.is_alive then
 				if event.name == "space" then
+					ui_sprites.clear
 					world.spawn_player
 				end
 			end
@@ -323,6 +333,10 @@ redef class Player
 			splatter.rotation = 2.0 * pi.rand
 			app.actors.add splatter
 		end
+
+		# Display respawn instructions
+		# TODO explosions and delay
+		app.ui_sprites.add new Sprite(app.ui_respawn, app.ui_camera.center)
 	end
 end
 
