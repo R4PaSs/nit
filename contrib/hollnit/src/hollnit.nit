@@ -79,18 +79,25 @@ redef class App
 	fun generate_world: World
 	do
 		var world = new World
-		world.player = new Player(new Point3d[Float](0.0, 200.0, 0.0), 4.0, 4.0,
-			new Ak47)
+		world.spawn_player
+		return world
+	end
 
-			#for i in [0..100] do
-			#world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 8.0, 0.0), 16.0, 4.0)
-			#end
+	fun generate_debug_world: World
+	do
+		var world = new World
 
-		world.planes.add new Platform(new Point3d[Float](0.0, 190.0, 0.0), 16.0, 4.0)
+		for i in [0..100] do
+			world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 8.0, 0.0), 16.0, 4.0)
+			world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 16.0, 0.0), 16.0, 4.0)
+
+		end
+
 		# Enemies
 		world.enemies.add new WalkingEnemy(new Point3d[Float](20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
 		world.enemies.add new JetpackEnemy(new Point3d[Float](-20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
 
+		world.spawn_player
 		return world
 	end
 

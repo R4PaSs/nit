@@ -72,6 +72,12 @@ class World
 			end
 		end
 	end
+
+	fun spawn_player
+	do
+		player = new Player(new Point3d[Float](0.0, 200.0, 0.0), 4.0, 4.0,
+			new Ak47)
+	end
 end
 
 abstract class Body
@@ -328,7 +334,7 @@ abstract class Human
 	# Is the weapon ready to shoot yet?
 	fun can_shoot(world: World): Bool
 	do
-		return world.t - weapon.last_shot >= weapon.cooldown
+		return is_alive and world.t - weapon.last_shot >= weapon.cooldown
 	end
 
 	fun shoot(angle: Float, world: World) do
