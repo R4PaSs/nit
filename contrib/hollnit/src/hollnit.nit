@@ -43,6 +43,8 @@ redef class App
 
 	var parachute_texture = new Texture("textures/parachute.png")
 
+	var iss_model = new Model("models/iss.obj")
+
 	# Ground
 	private var ground_texture = new Texture("textures/fastgras01.png")
 
@@ -121,6 +123,10 @@ redef class App
 	redef fun on_create
 	do
 		super
+
+		show_splash_screen plane_texture
+
+		iss_model.load
 
 		# Move the camera to show all the world world in the screen range
 		world_camera.reset_height(40.0)
@@ -325,9 +331,19 @@ redef class App
 end
 
 redef class Body
+	# Sprite representing this entity if there is no `actor`
 	fun sprite: Sprite is abstract
 
-	init do app.sprites.add sprite
+	# 3D actor
+	fun actor: nullable Actor do return null
+
+	init
+	do
+		var actor = actor
+		if actor != null then
+			app.actors.add actor
+		else app.sprites.add sprite
+	end
 
 	redef fun destroy(world)
 	do
@@ -370,6 +386,12 @@ end
 
 redef class Helicopter
 	redef var sprite = new Sprite(app.helicopter_texture, center) is lazy
+
+	redef var actor is lazy do
+		var actor = new Actor(app.iss_model, center)
+		actor.rotation = pi/2.0
+		return actor
+	end
 end
 
 redef class Enemy
