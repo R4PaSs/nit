@@ -4,3 +4,4 @@
 * City skyline created by Alucard
 * Biplane created by Bert-o-Naught
 * Particles and others created by kenny.nl under CC0.
+* Font Armalite Rifle by Vic Fieger

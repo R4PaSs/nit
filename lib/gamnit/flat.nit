@@ -77,6 +77,8 @@ class Sprite
 		simple_2d_program.translation.array_enabled = false
 		simple_2d_program.color.array_enabled = false
 		simple_2d_program.scale.array_enabled = false
+		simple_2d_program.tex_coord.array_enabled = true
+		simple_2d_program.coord.array_enabled = true
 
 		simple_2d_program.translation.uniform(center.x, center.y, center.z, 0.0)
 		simple_2d_program.color.uniform(color[0], color[1], color[2], color[3])
@@ -215,6 +217,13 @@ redef class App
 	# Draw sprites in `sprites`
 	protected fun frame_core_ui_sprites(display: GamnitDisplay)
 	do
+		simple_2d_program.use
+
+		# Set constant configs
+		simple_2d_program.coord.array_enabled = true
+		simple_2d_program.tex_coord.array_enabled = true
+		simple_2d_program.color.array_enabled = false
+
 		# Reset only the depth buffer
 		glClear gl_DEPTH_BUFFER_BIT
 
