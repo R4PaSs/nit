@@ -3,7 +3,7 @@ import core
 redef class World
 
 	var max_planes = 12
-	var max_enemies = 5
+	var max_enemies = 3
 
 	redef fun update(dt) do
 		super
@@ -15,7 +15,7 @@ redef class World
 		if p == null then return false
 		for i in planes.reverse_iterator do
 			if i.out_of_screen(p, self) then
-				print "Despawning plane"
+				#print "Despawning plane"
 				i.destroy(self)
 			end
 		end
@@ -35,7 +35,7 @@ redef class World
 		end
 		var yspawn: Float
 		if planes.length == 0 then
-			print "First plane spawn"
+			#print "First plane spawn"
 			yspawn = p.center.y & 25.0
 		else
 			var py = p.center.y
@@ -44,7 +44,7 @@ redef class World
 			var above_y = new Array[Float]
 			var below_y = new Array[Float]
 			for i in planes do
-				print "Plane coordinates = {i.center}"
+				#print "Plane coordinates = {i.center}"
 				var iy = i.center.y
 				if iy > py then
 					planes_above += 1
@@ -67,9 +67,12 @@ redef class World
 					yspawn = above_y.rand + 25.0.rand
 				end
 			end
+			if yspawn < 0.0 then
+				yspawn = py + 15.0.rand
+			end
 		end
 		pos = new Point3d[Float](xspawn, yspawn, 0.0 & 0.2)
-		print("Spawning plane at position {pos}")
+		#print("Spawning plane at position {pos}")
 		var platform_type = 100.rand
 		var plane: Platform
 		if platform_type < 90 then
@@ -87,7 +90,7 @@ redef class World
 	fun spawn_enemy(spawned_plane: Bool) do
 		var p = player
 		if p == null then return
-		for i in planes.reverse_iterator do
+		for i in enemies.reverse_iterator do
 			if i.out_of_screen(p, self) then
 				print "Despawning enemy"
 				i.destroy(self)
@@ -97,15 +100,15 @@ redef class World
 		var spawn = 100.rand
 		if spawn < 95 then return
 		if spawned_plane then
-			print "Spawning walking enemy"
 			var pl = planes.last
 			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.top / 2.0, 0.0)
+			print "Spawning walking enemy at positon {pos}"
 			var enemy = new WalkingEnemy(pos, 3.0, 3.0, new Ak47)
 			enemy.inertia = pl.inertia
+			pl.enemy = enemy
 			enemies.add enemy
 			return
 		end
-		print "Spawning jetpack enemy"
 		# 0: Up
 		# 1: Right
 		# 2: Down
@@ -141,6 +144,7 @@ redef class World
 			abort
 		end
 		var pos = new Point3d[Float](xspawn, yspawn, 0.0)
+		print "Spawning jetpack enemy at positon {pos}"
 		var enemy = new JetpackEnemy(pos, 3.0, 3.0, new Ak47)
 		enemy.inertia = new Point3d[Float](xinertia, yinertia, 0.0)
 		enemies.add enemy

@@ -41,6 +41,8 @@ redef class App
 
 	var city_texture = new Texture("textures/city_background_clean.png")
 
+	var parachute_texture = new Texture("textures/parachute.png")
+
 	# Ground
 	private var ground_texture = new Texture("textures/fastgras01.png")
 
@@ -259,6 +261,14 @@ redef class App
 			var player = world.player
 			if player != null and player.is_alive then
 
+				if event.name == "space" and event.is_down and not player.parachute_deployed then
+					player.parachute
+					if player.parachute_deployed then
+						var pc = player.center
+						world.parachute = new Parachute(new Point3d[Float](pc.x, pc.y + 5.0, pc.z), 2.0, 5.0)
+					end
+				end
+
 				if (event.name == "space" or event.name == "up") and event.is_down then
 					player.jump
 				end
@@ -341,6 +351,11 @@ end
 redef class Enemy
 	redef var sprite = new Sprite(app.player_textures.rand, center) is lazy
 	init do sprite.scale = width/sprite.texture.width * 2.0
+end
+
+redef class Parachute
+	redef var sprite = new Sprite(app.parachute_texture, center) is lazy
+	init do sprite.scale = width / sprite.texture.width * 2.0
 end
 
 redef class Player

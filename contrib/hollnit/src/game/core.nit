@@ -27,6 +27,8 @@ class World
 
 	var boss_altitude = 10000.0
 
+	var parachute: nullable Parachute = null is writable
+
 	# Runtime of this game
 	var t = 0.0
 
@@ -60,6 +62,7 @@ class World
 
 		for i in enemy_bullets.reverse_iterator do i.update(dt, self)
 		for i in player_bullets.reverse_iterator do i.update(dt, self)
+		if parachute != null then parachute.update(dt, self)
 	end
 
 	fun explode(center: Point3d[Float], force: Float)
@@ -149,6 +152,15 @@ abstract class Body
 		end
 	end
 
+	fun out_of_screen(player: Player, world: World): Bool do
+		var camera = world.camera_view
+		if right < camera.left - 20.0 then return true
+		if left > camera.right + 20.0 then return true
+		if top < camera.bottom - 20.0 then return true
+		if bottom > camera.top + 20.0 then return true
+		return false
+	end
+
 	fun hit(value: Float, world: World)
 	do
 		self.health -= value
@@ -196,14 +208,7 @@ class Platform
 
 	var old_inertia: nullable Point3d[Float] = null
 
-	fun out_of_screen(player: Player, world: World): Bool do
-		var camera = world.camera_view
-		if right < camera.left - 20.0 then return true
-		if left > camera.right + 20.0 then return true
-		if top < camera.bottom - 20.0 then return true
-		if bottom > camera.top + 20.0 then return true
-		return false
-	end
+	var enemy: nullable WalkingEnemy = null is writable
 
 	fun player_dist(world: World): Float do
 		var p = world.player
@@ -241,6 +246,7 @@ class Platform
 				inertia = ninertia
 				old_inertia = oi
 				slowed_down = true
+				if enemy != null then enemy.inertia = inertia
 			end
 		else if dst > 30.0 and not accelerated then
 			var oi = old_inertia
@@ -254,6 +260,21 @@ end
 
 class Helicopter
 	super Platform
+end
+
+class Parachute
+	super Body
+
+	redef var affected_by_gravity = false
+
+	redef fun update(dt, world) do
+		super
+		inertia.x = 0.0
+		inertia.y = 0.0
+		inertia.z = 0.0
+		center.x = world.player.center.x
+		center.y = world.player.center.y + 5.0
+	end
 end
 
 abstract class Human
@@ -270,6 +291,8 @@ abstract class Human
 
 	var jump_accel = 24.0
 
+	var para_accel: Float = -12.0
+
 	# On which plane? if any
 	var plane: nullable Platform = null
 
@@ -281,6 +304,8 @@ abstract class Human
 
 	var ltr = false
 
+	var parachute_deployed: Bool = false
+
 	# Apply a jump from input
 	fun jump
 	do
@@ -289,6 +314,19 @@ abstract class Human
 			# On solid plane, jump
 			inertia.y += 120.0
 			inertia.x = plane.inertia.x + moving * jump_accel
+
+			self.plane = null
+		end
+	end
+
+	# Deploy parachute on input
+	fun parachute
+	do
+		var plane = plane
+		if plane == null and not parachute_deployed then
+			# Deploy parachute
+			parachute_deployed = true
+			inertia.y = -10.0
 
 			self.plane = null
 		end
@@ -339,18 +377,21 @@ abstract class Human
 			inertia.x += moving * freefall_accel * dt
 			inertia.x *= 0.99
 
-			if inertia.y < 0.0 then
-				# Parachute
-				#inertia.y *= 0.9
-			end
-
 			var old_y = bottom
 			super
+			if parachute_deployed then
+				if inertia.y < -10.0 then inertia.y = -10.0
+			end
 
 			# Detect collision with planes
 			for plane in world.planes do # TODO optimize with quad tree
 				if plane.left < right and plane.right > left then
 					if old_y > plane.top and bottom <= plane.top then
+						if world.parachute != null then
+							world.parachute.destroy(world)
+							world.parachute = null
+						end
+						parachute_deployed = false
 						# Landed on a plane
 						plane.inertia.y += inertia.y / plane.mass
 
