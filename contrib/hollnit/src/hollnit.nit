@@ -28,9 +28,13 @@ redef class App
 
 	var gnd_texture = new Texture("textures/plane.png")
 
-	var plane_texture = new Texture("textures/plane.png")
+	var plane_textures: Array[Texture] = [
+		new Texture("textures/plane_left.png"),
+		new Texture("textures/plane.png")]
 
-	var helicopter_texture = new Texture("textures/helicopter.png")
+	var helicopter_textures: Array[Texture] = [
+		new Texture("textures/helicopter.png"),
+		new Texture("textures/helicopter_right.png")]
 
 	var enemy_texture = new Texture("textures/enemy.png")
 
@@ -150,7 +154,7 @@ redef class App
 			var s = 0.1 + 0.1.rand
 			var h = tree_texture.height * s
 			var sprite = new Sprite(tree_texture,
-				new Point3d[Float](0.0 & 1500.0, h/2.0 - 10.0*s, -10.0 - 1000.0.rand))
+				new Point3d[Float](0.0 & 1500.0, h/2.0 - 10.0*s, 10.0 - 1009.0.rand))
 			sprite.scale = s
 			sprites.add sprite
 
@@ -294,15 +298,26 @@ redef class Body
 end
 
 redef class Platform
-	redef var sprite = new Sprite(app.plane_texture, center) is lazy
-	init do
-		sprite.scale = width/sprite.texture.width
+
+	fun textures: Array[Texture] do return app.plane_textures
+
+	redef var sprite = new Sprite(textures.first, center) is lazy
+	init do sprite.scale = width/sprite.texture.width
+
+	redef fun update(dt, world)
+	do
+		super
+
+		if inertia.x < 0.0 then
+			sprite.texture = textures[0]
+		else if inertia.x > 0.0 then
+			sprite.texture = textures[1]
+		end
 	end
 end
 
 redef class Helicopter
-	redef var sprite = new Sprite(app.helicopter_texture, center) is lazy
-	init do sprite.scale = width/sprite.texture.width
+	redef fun textures do return app.helicopter_textures
 end
 
 redef class Enemy
