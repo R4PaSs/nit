@@ -308,7 +308,7 @@ class SmokeProgram
 
 	redef fun vertex_shader_core do return """
 		vec4 c = center;
-		c.y += dt * 1.0;
+		c.y += dt * 50.0;
 		c.x += dt * 0.1;
 
 		gl_Position = c * mvp;

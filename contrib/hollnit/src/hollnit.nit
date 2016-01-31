@@ -57,8 +57,13 @@ redef class App
 	# Explosion particle system
 	var explosions = new ParticleSystem(20, explosion_program,
 		new Texture("particles/explosion00.png"))
+
 	var blood = new ParticleSystem(20, explosion_program,
 		new Texture("particles/blood07.png"))
+
+	# Explosion particles
+	var smoke = new ParticleSystem(500, smoke_program,
+		new Texture("particles/blackSmoke12.png"))
 
 	# ---
 	# Sound effects
@@ -91,6 +96,7 @@ redef class App
 		# Register particle systems
 		particle_systems.add explosions
 		particle_systems.add blood
+		particle_systems.add smoke
 
 		# Setup ground
 		# TODO we may need to move this plane if the player goes far from the center
@@ -108,7 +114,7 @@ redef class App
 		actors.add ground
 
 		# City
-		var city_sprite = new Sprite(city_texture, new Point3d[Float](0.0, 600.0, -990.0))
+		var city_sprite = new Sprite(city_texture, new Point3d[Float](0.0, 600.0, -999.0))
 		city_sprite.scale = 1.2
 		sprites.add city_sprite
 
@@ -139,6 +145,19 @@ redef class App
 		var p = altitude / world.boss_altitude
 		var ip = 1.0 - p
 		glClearColor(0.3*ip, 0.3*ip, ip, 1.0)
+
+		# Randomly add smoke
+		var poss = [
+			new Point3d[Float](432.0, 550.0, -1001.0),
+			new Point3d[Float](-497.0, 630.0, -1001.0)]
+
+		var r = 8.0
+		if 2.rand == 0 then # for pos in poss.rand do
+			var pos = poss.rand
+			smoke.add(
+				new Point3d[Float](pos.x & r, pos.y & r, pos.z & r),
+				48000.0 & 8000.0, 10.0)
+		end
 
 		# Move camera
 		world_camera.position.x = player_pos.x
