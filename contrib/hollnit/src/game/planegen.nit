@@ -94,6 +94,7 @@ redef class World
 		var randy = camera_view.left.rand + p.center.y
 		var pos = new Point3d[Float](randx, randy, 0.0)
 		var enemy = new JetpackEnemy(pos, 3.0, 3.0, new Ak47)
+		enemy.inertia = new Point3d[Float](10.0.rand, 10.0.rand, 0.0)
 		enemies.add enemy
 	end
 end
