@@ -29,6 +29,8 @@ class World
 
 	var parachute: nullable Parachute = null is writable
 
+	var boss: nullable Boss = null is writable
+
 	# Runtime of this game
 	var t = 0.0
 
@@ -63,6 +65,9 @@ class World
 		for i in enemy_bullets.reverse_iterator do i.update(dt, self)
 		for i in player_bullets.reverse_iterator do i.update(dt, self)
 		if parachute != null then parachute.update(dt, self)
+
+		var cam = camera_view
+		if player.altitude >= boss_altitude and boss == null then boss = new Boss(new Point3d[Float](cam.left + 40.0, cam.top - 20.0, 0.0), 100.0, 100.0, new Ak47)
 	end
 
 	fun explode(center: Point3d[Float], force: Float)
@@ -505,6 +510,12 @@ class WalkingEnemy
 end
 
 class JetpackEnemy
+	super Enemy
+
+	redef fun affected_by_gravity do return false
+end
+
+class Boss
 	super Enemy
 
 	redef fun affected_by_gravity do return false
