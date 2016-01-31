@@ -306,6 +306,9 @@ abstract class Human
 
 	var parachute_deployed: Bool = false
 
+	# Altitude (in meters)
+	fun altitude: Float do return center.y
+
 	# Apply a jump from input
 	fun jump
 	do

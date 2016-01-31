@@ -3,7 +3,7 @@ import core
 redef class World
 
 	var max_planes = 12
-	var max_enemies = 3
+	var max_enemies = 2
 
 	redef fun update(dt) do
 		super

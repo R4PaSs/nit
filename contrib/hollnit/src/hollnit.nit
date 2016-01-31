@@ -89,6 +89,9 @@ redef class App
 	var score_counter = new CounterSprites(texts_sheet.n,
 		new Point3d[Float](32.0, -64.0, 0.0))
 
+	var altitude_counter = new CounterSprites(texts_sheet.n,
+		new Point3d[Float](1400.0, -64.0, 0.0))
+
 	fun generate_world: World
 	do
 		var world = new World
@@ -190,6 +193,9 @@ redef class App
 		world.update dt
 
 		score_counter.value = world.score
+		var alt = 0
+		if world.player != null then alt = world.player.altitude.to_i
+		altitude_counter.value = alt
 
 		# Update background color
 		var player = world.player
