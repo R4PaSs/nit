@@ -186,10 +186,14 @@ redef class App
 	end
 
 	# Draw the whole screen, all `glDraw...` calls should be executed here
-	protected fun frame_core_draw(display: GamnitDisplay) do frame_core_flat display
+	protected fun frame_core_draw(display: GamnitDisplay)
+	do
+		frame_core_world_sprites display
+		frame_core_ui_sprites display
+	end
 
-	# Draw sprites in `sprites` and `ui_sprites`
-	protected fun frame_core_flat(display: GamnitDisplay)
+	# Draw sprites in `ui_sprites`
+	protected fun frame_core_world_sprites(display: GamnitDisplay)
 	do
 		simple_2d_program.use
 
@@ -202,7 +206,11 @@ redef class App
 		# World sprites
 		simple_2d_program.mvp.uniform world_camera.mvp_matrix
 		for sprite in sprites do sprite.draw
+	end
 
+	# Draw sprites in `sprites`
+	protected fun frame_core_ui_sprites(display: GamnitDisplay)
+	do
 		# Reset only the depth buffer
 		glClear gl_DEPTH_BUFFER_BIT
 
@@ -229,7 +237,7 @@ redef class App
 		var display = display
 		assert display != null
 		glClear gl_COLOR_BUFFER_BIT
-		frame_core_flat display
+		frame_core_ui_sprites display
 		display.flip
 
 		ui_sprites.remove splash
