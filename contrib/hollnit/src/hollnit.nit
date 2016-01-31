@@ -26,15 +26,30 @@ redef class App
 	var world: World = generate_world is lazy
 
 	var plane_texture = new Texture("textures/plane.png")
+
 	var enemy_texture = new Texture("textures/enemy.png")
+
 	var player_textures: Array[Texture] =
 		[for f in [1..12] do new Texture("textures/player/run-cycle-inked2_xcf-Frame_{f.pad(2)}__100ms___replace_.png")]
+
 	var bullet_texture = new Texture("textures/bullet.png")
 
-	var low_background_texture = new Texture("textures/low_background.png")
+	var city_texture = new Texture("textures/city_background_clean.png")
 
 	# Ground
 	private var ground_texture = new Texture("textures/fastgras01.png")
+
+	# ---
+	# Blood splatter
+	private var splatter_texture = new Texture("textures/blood_splatter.png")
+	private var splatter_material: TexturedMaterial do
+		var mat = new TexturedMaterial([1.0]*4, [0.0]*4, [0.0]*4)
+		mat.ambient_texture = splatter_texture
+		return mat
+	end
+	private var splatter_model = new LeafModel(new Plane, splatter_material)
+
+	var tree_texture = new Texture("textures/Tree03.png")
 
 	# ---
 	# Particle effects
@@ -55,8 +70,11 @@ redef class App
 		var world = new World
 		world.player = new Player(new Point3d[Float](0.0, 20.0, 0.0), 4.0, 4.0,
 			new Ak47)
-		world.planes.add new Platform(new Point3d[Float](0.0, 10.0, 0.0), 16.0, 4.0)
-		world.planes.add new Platform(new Point3d[Float](20.0, 22.0, 0.0), 16.0, 4.0)
+
+		for i in [0..100] do
+			world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 8.0, 0.0), 16.0, 4.0)
+			world.planes.add new Platform(new Point3d[Float](20.0, i.to_f*16.0 + 16.0, 0.0), 16.0, 4.0)
+		end
 
 		# Ground
 		world.planes.add new Platform(new Point3d[Float](0.0, -80.0, 0.0), 200.0, 161.0)
@@ -72,6 +90,7 @@ redef class App
 
 		# Register particle systems
 		particle_systems.add explosions
+		particle_systems.add blood
 
 		# Setup ground
 		# TODO we may need to move this plane if the player goes far from the center
@@ -87,6 +106,25 @@ redef class App
 		var ground = new Actor(ground_model, new Point3d[Float](0.0, 0.0, 0.0))
 		ground.scale = 5000.0
 		actors.add ground
+
+		# City
+		var city_sprite = new Sprite(city_texture, new Point3d[Float](0.0, 600.0, -990.0))
+		city_sprite.scale = 1.2
+		sprites.add city_sprite
+
+		# Trees
+		for i in 1000.times do
+			var s = 0.1 + 0.1.rand
+			var h = tree_texture.height * s
+			var sprite = new Sprite(tree_texture,
+				new Point3d[Float](0.0 & 1000.0, h/2.0 - 10.0*s, -20.0 - 900.0.rand))
+			sprite.scale = s
+			sprites.add sprite
+
+
+			var c = 1.0.rand
+			sprite.color = [c, 1.0, c, 1.0]
+		end
 	end
 
 	redef fun update(dt)
@@ -103,7 +141,7 @@ redef class App
 		glClearColor(0.3*ip, 0.3*ip, ip, 1.0)
 
 		# Move camera
-		#world_camera.position.x = player_pos.x
+		world_camera.position.x = player_pos.x
 		world_camera.position.y = player_pos.y + 5.0
 
 		# Try to fire as long as a key is pressed
@@ -163,10 +201,6 @@ redef class App
 			end
 		end
 
-		if event isa PointerEvent and event.depressed then
-			world.explode(new Point3d[Float](0.0, 0.0, 0.0), 16.0)
-		end
-
 		return s
 	end
 end
@@ -195,6 +229,27 @@ end
 redef class Player
 	redef var sprite = new Sprite(app.player_textures.rand, center) is lazy
 	init do sprite.scale = width/sprite.texture.width * 2.0
+
+	redef fun die(world)
+	do
+		super
+
+		var force = 4.0
+		for i in 32.times do
+			app.blood.add(
+				new Point3d[Float](center.x & force, center.y & force, center.z & force),
+				(1024.0 & 2048.0) * force, 0.3 & 0.1)
+		end
+
+		if center.y < 10.0 then
+			# Blood splatter on the ground
+			var splatter = new Actor(app.splatter_model,
+				new Point3d[Float](center.x, 0.05 & 0.04, center.y))
+			splatter.scale = 32.0
+			splatter.rotation = 2.0 * pi.rand
+			app.actors.add splatter
+		end
+	end
 end
 
 redef class Bullet
@@ -209,13 +264,15 @@ redef class World
 
 	redef fun explode(center, force)
 	do
+		super
+
 		# Particles
-		app.explosions.add(new Point3d[Float](center.x, 1.0, center.y), 4096.0, 0.3)
-		for i in 8.times do
+		app.explosions.add(center, 4096.0 * force, 0.3)
+		for i in 32.times do
 			app.explosions.add(
-				new Point3d[Float](center.x & 1.0, 1.0 & 1.0, center.y & 1.0),
-				2048.0 & 1024.0, 0.3 & 0.1)
-			end
+				new Point3d[Float](center.x & force, center.y & force, center.z & force),
+				2048.0 & 1024.0 * force, 0.3 & 0.1)
+		end
 	end
 end
 
@@ -235,8 +292,21 @@ redef class Float
 	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
 end
 
-class Animation
-	super Sprite
+#class Animation
+	#super Sprite
+
+	#var time_per_frame: Float
+
+	#private var current_t = 0.0
+
+	#new (frames: Array[Texture], center: Point3d[Float], time_per_frame: Float)
+	#do
+		#init(frames.first, center, frames, time_per_frame)
+	#end
+
+	#var frames: Array[Texture]
 
 	#redef fun sprite
-end
+	#do
+	#end
+#end

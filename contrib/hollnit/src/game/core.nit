@@ -67,6 +67,7 @@ class World
 		if player != null then lists.add([player])
 
 		for l in lists do
+			print l
 			for body in l do
 				body.apply_force(center, force)
 			end
@@ -122,11 +123,30 @@ abstract class Body
 		var d2 = dx*dx + dy*dy
 		#TODO if d2 > ? then return
 
-		inertia.x += force / dx / mass
-		inertia.y += force / dy / mass
+		inertia.x += force / dx / mass * 16.0
+		inertia.y += force / dy / mass * 32.0
+
+		if self isa Player then
+			self.plane = null
+		end
 	end
 
-	fun hit(value: Float) do self.health -= value
+	fun hit(value: Float, world: World)
+	do
+		self.health -= value
+		if self.health <= 0.0 then die(world)
+	end
+
+	# Die in the game logic with animations for the player
+	#
+	# Calls `destroy` by default.
+	fun die(world: World)
+	do
+		is_alive = false
+		destroy world
+	end
+
+	# Destroy this objects and most references to it
 	fun destroy(world: World) do end
 
 	redef fun top do return center.y + height / 2.0
@@ -142,6 +162,24 @@ class Platform
 	redef fun mass do return 100.0
 
 	redef fun affected_by_gravity do return false
+
+	redef fun die(world)
+	do
+		super
+		world.explode(center, width)
+	end
+
+	redef fun destroy(world)
+	do
+		world.planes.remove self
+		super
+	end
+
+	redef fun update(dt, world)
+	do
+		inertia.y *= 0.95
+		super
+	end
 end
 
 abstract class Human
@@ -150,10 +188,13 @@ abstract class Human
 	# Input direction in `[-1.0 .. 1.0]`
 	var moving = 0.0 is writable
 
-	# `moving` speed
+	# `moving` speed when on a plane, applied directly to `center`
 	var walking_speed = 20.0
 
+	# `moving` speed when in freefall, applied to `inertia`
 	var freefall_accel = 100.0
+
+	var jump_accel = 24.0
 
 	# On which plane? if any
 	var plane: nullable Platform = null
@@ -169,21 +210,31 @@ abstract class Human
 			inertia.y += 80.0
 			plane = null
 
-			inertia.x = moving * 24.0
+			inertia.x = moving * jump_accel
 		end
 	end
 
 	redef fun update(dt, world)
 	do
+		if not is_alive then return
+
 		var on_plane = plane
+		if on_plane != null then
+			# Is it still alive?
+			if not on_plane.is_alive then
+				on_plane = null
+				self.plane = null
+			end
+		end
+
 		if on_plane != null then
 			# On a plane, applying special physics do not call super!
 
 			# Precise movements
 			center.x += moving * walking_speed * dt
+			center.y = on_plane.top + height / 2.0
 
 			# Detect fall
-
 			if not (plane.left < right and plane.right > left) then
 				self.plane = null
 			end
@@ -201,25 +252,31 @@ abstract class Human
 				if plane.left < right and plane.right > left then
 					if old_y > plane.top and bottom <= plane.top then
 						# Landed on a plane
+						plane.inertia.y += inertia.y / plane.mass
+
+						# Update self
 						self.plane = plane
 						inertia.x = 0.0
 						inertia.y = 0.0
 						center.y = plane.top + height / 2.0
+
 						break
 					end
 				end
 			end
 		end
 
-		if bottom == 0.0 then
-			is_alive = false
+		if bottom <= 0.0 then
+			die world
+			inertia.x = 0.0
+			inertia.y = 0.0
 		end
 	end
 end
 
 class Player
 	super Human
-	
+
 	fun shoot(angle: Float, world: World) do
 		if world.t - weapon.last_shot < weapon.cooldown then return
 		var x_inertia = angle.cos * weapon.power
@@ -242,17 +299,25 @@ class Powerup
 end
 
 class Weapon
+
 	var last_shot: Float is writable, noinit
+
 	fun damage: Float is abstract
+
 	fun cooldown: Float is abstract
+
 	fun power: Float is abstract
+
 	fun bullet_lifespan: Float is abstract
 end
 
 class Bullet
 	super Body
+
 	var angle: Float
+
 	var weapon: Weapon
+
 	var creation_time: Float
 
 	redef fun affected_by_gravity do return false
@@ -262,21 +327,24 @@ class Bullet
 		if world.t - creation_time >= weapon.bullet_lifespan then destroy(world)
 	end
 
-	fun hit_enemy(body: Body) do body.hit(self.weapon.damage)
+	fun hit_enemy(body: Body, world: World) do body.hit(self.weapon.damage, world)
 end
 
 class PlayerBullet
 	super Bullet
+
 	var planes: Array[Platform]
+
 	var enemies: Array[Enemy]
+
 	redef fun update(dt, world) do
 		super
 		for i in planes do if self.intersects(i) then
-			hit_enemy(i)
+			hit_enemy(i, world)
 			destroy(world)
 		end
 		for i in enemies do if self.intersects(i) then
-			hit_enemy(i)
+			hit_enemy(i, world)
 			destroy(world)
 		end
 	end
@@ -289,11 +357,13 @@ end
 
 class EnemyBullet
 	super Bullet
+
 	var player: Player
+
 	redef fun update(dt, world) do
 		super
-		if self.intersects(player) then 
-			hit_enemy(player)
+		if self.intersects(player) then
+			hit_enemy(player, world)
 			destroy(world)
 		end
 	end
@@ -307,8 +377,12 @@ end
 
 class Ak47
 	super Weapon
+
 	redef var damage = 10.0
+
 	redef var cooldown = 0.1
+
 	redef var power = 50.0
+
 	redef var bullet_lifespan = 3.0
 end

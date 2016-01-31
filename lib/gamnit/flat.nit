@@ -61,6 +61,8 @@ class Sprite
 	# Transparency applied to the texture on draw
 	var alpha = 1.0 is writable
 
+	var color: Array[Float] = [1.0, 1.0, 1.0, 1.0] is writable
+
 	private fun draw
 	do
 		var simple_2d_program = app.simple_2d_program
@@ -73,7 +75,7 @@ class Sprite
 		simple_2d_program.scale.array_enabled = false
 
 		simple_2d_program.translation.uniform(center.x, center.y, center.z, 0.0)
-		simple_2d_program.color.uniform(1.0, 1.0, 1.0, alpha)
+		simple_2d_program.color.uniform(color[0], color[1], color[2], color[3]*alpha)
 		simple_2d_program.scale.uniform scale
 
 		simple_2d_program.use_texture.uniform true
