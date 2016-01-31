@@ -105,6 +105,7 @@ redef class World
 			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.top / 2.0, 0.0)
 			var enemy = new WalkingEnemy(pos, 3.0, 3.0, new Ak47)
 			enemy.inertia = pl.inertia
+			pl.enemy = enemy
 			enemies.add enemy
 			return
 		end

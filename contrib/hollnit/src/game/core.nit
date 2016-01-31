@@ -193,6 +193,8 @@ class Platform
 
 	var old_inertia: nullable Point3d[Float] = null
 
+	var enemy: nullable WalkingEnemy = null is writable
+
 	fun out_of_screen(player: Player, world: World): Bool do
 		var camera = world.camera_view
 		if right < camera.left - 20.0 then return true
@@ -237,6 +239,7 @@ class Platform
 			inertia = ninertia
 			old_inertia = oi
 			slowed_down = true
+			if enemy != null then enemy.inertia = inertia
 		else
 			var oi = old_inertia
 			if oi == null then return
