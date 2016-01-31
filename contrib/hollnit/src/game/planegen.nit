@@ -1,14 +1,9 @@
 import core
 
-redef class Float
-	# Fuzzy value in `[self-variation..self+variation]`
-	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
-end
-
 redef class World
 
-	var max_planes = 10
-	var max_enemies = 10
+	var max_planes = 12
+	var max_enemies = 5
 
 	redef fun update(dt) do
 		super
@@ -43,19 +38,34 @@ redef class World
 			print "First plane spawn"
 			yspawn = p.center.y & 25.0
 		else
-			var possible_y = new Array[Float]
+			var py = p.center.y
+			var planes_below = 0
+			var planes_above = 0
+			var above_y = new Array[Float]
+			var below_y = new Array[Float]
 			for i in planes do
 				print "Plane coordinates = {i.center}"
 				var iy = i.center.y
-				for j in possible_y do
-					if (j - iy).abs < 10.0 then continue
+				if iy > py then
+					planes_above += 1
+					above_y.add iy
+				else
+					planes_below += 1
+					below_y.add iy
 				end
-				possible_y.add iy
 			end
-			if not possible_y.is_empty then
-				yspawn = possible_y.rand & 30.0
+			if planes_below < planes_above then
+				if planes_below == 0 then
+					yspawn = py - 15.0.rand
+				else
+					yspawn = below_y.rand - 25.0.rand
+				end
 			else
-				yspawn = p.center.y & 25.0
+				if planes_above == 0 then
+					yspawn = py + 15.0.rand
+				else
+					yspawn = above_y.rand + 25.0.rand
+				end
 			end
 		end
 		pos = new Point3d[Float](xspawn, yspawn, 0.0 & 0.2)

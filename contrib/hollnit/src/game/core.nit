@@ -207,13 +207,15 @@ class Platform
 		inertia.y *= 0.95
 		super
 		var dst = player_dist(world)
-		if dst < 7.0 then
+		if dst < 20.0 then
 			var oi = inertia
 			var ninertia: Point3d[Float]
+			var speed = 10.0 & 15.0
+			if speed < 10.0 then speed = 10.0
 			if oi.x < 0.0 then
-				ninertia = new Point3d[Float](-20.0, 0.1, 0.0)
+				ninertia = new Point3d[Float](-speed, 0.1, 0.0)
 			else
-				ninertia = new Point3d[Float](20.0, 0.1, 0.0)
+				ninertia = new Point3d[Float](speed, 0.1, 0.0)
 			end
 			#print "Changed inertia from {inertia} to {ninertia}"
 			inertia = ninertia
@@ -483,4 +485,9 @@ class Ak47
 	redef var power = 50.0
 
 	redef var bullet_lifespan = 3.0
+end
+
+redef class Float
+	# Fuzzy value in `[self-variation..self+variation]`
+	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
 end
