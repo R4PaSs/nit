@@ -27,6 +27,8 @@ class World
 
 	var boss_altitude = 10000.0
 
+	var parachute: nullable Parachute = null is writable
+
 	# Runtime of this game
 	var t = 0.0
 
@@ -60,6 +62,7 @@ class World
 
 		for i in enemy_bullets.reverse_iterator do i.update(dt, self)
 		for i in player_bullets.reverse_iterator do i.update(dt, self)
+		if parachute != null then parachute.update(dt, self)
 	end
 
 	fun explode(center: Point3d[Float], force: Float)
@@ -259,6 +262,21 @@ class Helicopter
 	super Platform
 end
 
+class Parachute
+	super Body
+
+	redef var affected_by_gravity = false
+
+	redef fun update(dt, world) do
+		super
+		inertia.x = 0.0
+		inertia.y = 0.0
+		inertia.z = 0.0
+		center.x = world.player.center.x
+		center.y = world.player.center.y + 5.0
+	end
+end
+
 abstract class Human
 	super Body
 
@@ -272,6 +290,8 @@ abstract class Human
 	var freefall_accel = 150.0
 
 	var jump_accel = 24.0
+
+	var para_accel: Float = -12.0
 
 	# On which plane? if any
 	var plane: nullable Platform = null
@@ -367,7 +387,10 @@ abstract class Human
 			for plane in world.planes do # TODO optimize with quad tree
 				if plane.left < right and plane.right > left then
 					if old_y > plane.top and bottom <= plane.top then
-						world.parachute = null
+						if world.parachute != null then
+							world.parachute.destroy(world)
+							world.parachute = null
+						end
 						parachute_deployed = false
 						# Landed on a plane
 						plane.inertia.y += inertia.y / plane.mass

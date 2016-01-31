@@ -44,7 +44,7 @@ redef class World
 			var above_y = new Array[Float]
 			var below_y = new Array[Float]
 			for i in planes do
-				print "Plane coordinates = {i.center}"
+				#print "Plane coordinates = {i.center}"
 				var iy = i.center.y
 				if iy > py then
 					planes_above += 1
