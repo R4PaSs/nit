@@ -192,24 +192,28 @@ redef class App
 		world_camera.position.y = player_pos.y + 5.0
 
 		# Try to fire as long as a key is pressed
-		for key in pressed_keys do
+		if pressed_keys.not_empty then
 			var a = inf
-			if key == "a" then
-				a = pi
-			else if key == "d" then
-				a = 0.0
-			else if key == "q" then
-				a = 0.75 * pi
-			else if key == "w" then
+			if pressed_keys.has("a") then
+				if pressed_keys.has("w") then
+					a = 0.75 * pi
+				else if pressed_keys.has("s") then
+					a = 1.25 * pi
+				else
+					a = pi
+				end
+			else if pressed_keys.has("d") then
+				if pressed_keys.has("w") then
+					a = 0.25 * pi
+				else if pressed_keys.has("s") then
+					a = 1.75 * pi
+				else
+					a = 0.0
+				end
+			else if pressed_keys.has("w") then
 				a = 0.50 * pi
-			else if key == "e" then
-				a = 0.25 * pi
-			else if key == "z" then
-				a = 1.25 * pi
-			else if key == "x" then
+			else if pressed_keys.has("s") then
 				a = 1.50 * pi
-			else if key == "c" then
-				a = 1.75 * pi
 			end
 
 			if a != inf and player != null then
