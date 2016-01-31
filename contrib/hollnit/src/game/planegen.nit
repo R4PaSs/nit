@@ -13,6 +13,12 @@ redef class World
 	fun spawn_plane: Bool do
 		var p = player
 		if p == null then return false
+		if p.altitude >= boss_altitude then
+			for i in planes.reverse_iterator do
+				i.destroy(self)
+			end
+			return false
+		end
 		for i in planes.reverse_iterator do
 			if i.out_of_screen(p, self) then
 				#print "Despawning plane"
@@ -90,6 +96,12 @@ redef class World
 	fun spawn_enemy(spawned_plane: Bool) do
 		var p = player
 		if p == null then return
+		if p.altitude >= boss_altitude then
+			for i in enemies.reverse_iterator do
+				i.destroy(self)
+			end
+			return
+		end
 		for i in enemies.reverse_iterator do
 			if i.out_of_screen(p, self) then
 				print "Despawning enemy"
