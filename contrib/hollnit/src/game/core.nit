@@ -82,7 +82,7 @@ abstract class Body
 	var center: Point3d[Float]
 
 	# Inertia of this body
-	var inertia = new Point3d[Float](0.0, 0.0, 0.0)
+	var inertia = new Point3d[Float](0.0, 0.0, 0.0) is writable
 
 	# Is this body still alive?
 	var is_alive = true
@@ -98,6 +98,8 @@ abstract class Body
 	fun max_health: Float do return 100.0
 
 	fun affected_by_gravity: Bool do return true
+
+	fun dead: Bool do return health <= 0.0
 
 	fun update(dt: Float, world: World)
 	do
@@ -175,11 +177,52 @@ class Platform
 		super
 	end
 
-	redef fun update(dt, world)
-	do
+	var old_inertia: nullable Point3d[Float] = null
+
+	fun out_of_screen(player: Player, world: World): Bool do
+		var camera = world.camera_view
+		if right < camera.left - 10.0 then return true
+		if left > camera.right + 10.0 then return true
+		if top < camera.bottom - 10.0 then return true
+		if bottom > camera.top + 10.0 then return true
+		return false
+	end
+
+	fun player_dist(world: World): Float do
+		var p = world.player
+		if p == null then return 0.0
+		var px = p.center.x
+		var dst = center.x - px
+		print "Player x position = {px}, distance = {dst}"
+		return dst.abs
+	end
+
+	redef fun update(dt, world) do
 		inertia.y *= 0.95
 		super
+		var dst = player_dist(world)
+		if dst < 7.0 then
+			var oi = inertia
+			var ninertia: Point3d[Float]
+			if oi.x < 0.0 then
+				ninertia = new Point3d[Float](-20.0, 0.1, 0.0)
+			else
+				ninertia = new Point3d[Float](20.0, 0.1, 0.0)
+			end
+			#print "Changed inertia from {inertia} to {ninertia}"
+			inertia = ninertia
+			old_inertia = oi
+		else
+			var oi = old_inertia
+			if oi == null then return
+			inertia = oi
+		end
 	end
+
+end
+
+class Helicopter
+	super Platform
 end
 
 abstract class Human

@@ -25,7 +25,11 @@ redef class App
 	# Game world
 	var world: World = generate_world is lazy
 
+	var gnd_texture = new Texture("textures/plane.png")
+
 	var plane_texture = new Texture("textures/plane.png")
+
+	var helicopter_texture = new Texture("textures/helicopter.png")
 
 	var enemy_texture = new Texture("textures/enemy.png")
 
@@ -78,17 +82,15 @@ redef class App
 		world.player = new Player(new Point3d[Float](0.0, 200.0, 0.0), 4.0, 4.0,
 			new Ak47)
 
-		for i in [0..100] do
-			world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 8.0, 0.0), 16.0, 4.0)
-			world.planes.add new Platform(new Point3d[Float](20.0, i.to_f*16.0 + 16.0, 0.0), 16.0, 4.0)
-		end
+			#for i in [0..100] do
+			#world.planes.add new Platform(new Point3d[Float](0.0, i.to_f*16.0 + 8.0, 0.0), 16.0, 4.0)
+			#end
 
+		world.planes.add new Platform(new Point3d[Float](0.0, 190.0, 0.0), 16.0, 4.0)
 		# Enemies
 		world.enemies.add new WalkingEnemy(new Point3d[Float](20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
 		world.enemies.add new JetpackEnemy(new Point3d[Float](-20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
 
-		# Ground
-		world.planes.add new Platform(new Point3d[Float](0.0, -80.0, 0.0), 200.0, 161.0)
 		return world
 	end
 
@@ -135,9 +137,8 @@ redef class App
 			sprite.scale = s
 			sprites.add sprite
 
-
 			var c = 1.0.rand
-			sprite.color = [c, 1.0, c, 1.0]
+			#sprite.color = [c, 1.0, c, 1.0]
 		end
 
 		# Clouds
@@ -265,6 +266,13 @@ end
 
 redef class Platform
 	redef var sprite = new Sprite(app.plane_texture, center) is lazy
+	init do
+		sprite.scale = width/sprite.texture.width
+	end
+end
+
+redef class Helicopter
+	redef var sprite = new Sprite(app.helicopter_texture, center) is lazy
 	init do sprite.scale = width/sprite.texture.width
 end
 
@@ -282,6 +290,7 @@ redef class Player
 		super
 
 		var force = 4.0
+		health = 0.0
 		for i in 32.times do
 			app.blood.add(
 				new Point3d[Float](center.x & force, center.y & force, center.z & force),
@@ -332,11 +341,6 @@ redef class Int
 		if d > 0 then s = "0"*d + s
 		return s
 	end
-end
-
-redef class Float
-	# Fuzzy value in `[self-variation..self+variation]`
-	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
 end
 
 #class Animation

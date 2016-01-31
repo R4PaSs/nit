@@ -14,3 +14,4 @@
 
 import core
 import ai
+import planegen
