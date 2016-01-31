@@ -213,6 +213,7 @@ class Platform
 
 	# Has this plane slowed down because it is close to the player?
 	private var slowed_down = false
+	private var accelerated = false
 
 	redef fun update(dt, world) do
 		inertia.y *= 0.95
@@ -220,27 +221,29 @@ class Platform
 		super
 
 		# Slow down if close to the player
-		if slowed_down then return
 
 		var dst = player_dist(world)
 		if dst < 20.0 then
-			var oi = inertia
-			var ninertia: Point3d[Float]
-			var speed = 10.0 & 15.0
-			if speed < 10.0 then speed = 10.0
-			if oi.x < 0.0 then
-				ninertia = new Point3d[Float](-speed, 0.1, 0.0)
-			else
-				ninertia = new Point3d[Float](speed, 0.1, 0.0)
+			if not slowed_down then
+				var oi = inertia
+				var ninertia: Point3d[Float]
+				var speed = 10.0 & 15.0
+				if speed < 10.0 then speed = 10.0
+				if oi.x < 0.0 then
+					ninertia = new Point3d[Float](-speed, 0.1, 0.0)
+				else
+					ninertia = new Point3d[Float](speed, 0.1, 0.0)
+				end
+				#print "Changed inertia from {inertia} to {ninertia}"
+				inertia = ninertia
+				old_inertia = oi
+				slowed_down = true
 			end
-			#print "Changed inertia from {inertia} to {ninertia}"
-			inertia = ninertia
-			old_inertia = oi
-			slowed_down = true
-		else
+		else if dst > 30.0 and not accelerated then
 			var oi = old_inertia
 			if oi == null then return
 			inertia = oi
+			accelerated = true
 		end
 	end
 
