@@ -175,7 +175,7 @@ end
 class Platform
 	super Body
 
-	redef fun mass do return 100.0
+	redef fun mass do return 20.0
 
 	redef fun affected_by_gravity do return false
 
@@ -263,7 +263,7 @@ abstract class Human
 	var walking_speed = 20.0
 
 	# `moving` speed when in freefall, applied to `inertia`
-	var freefall_accel = 100.0
+	var freefall_accel = 150.0
 
 	var jump_accel = 24.0
 
@@ -284,7 +284,7 @@ abstract class Human
 		var plane = plane
 		if plane != null then
 			# On solid plane, jump
-			inertia.y += 100.0
+			inertia.y += 120.0
 			inertia.x = plane.inertia.x + moving * jump_accel
 
 			self.plane = null
@@ -334,6 +334,12 @@ abstract class Human
 
 			# Only influence the inertia
 			inertia.x += moving * freefall_accel * dt
+			inertia.x *= 0.99
+
+			if inertia.y < 0.0 then
+				# Parachute
+				#inertia.y *= 0.9
+			end
 
 			var old_y = bottom
 			super
