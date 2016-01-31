@@ -61,9 +61,11 @@ redef class App
 	var blood = new ParticleSystem(20, explosion_program,
 		new Texture("particles/blood07.png"))
 
-	# Explosion particles
 	var smoke = new ParticleSystem(500, smoke_program,
 		new Texture("particles/blackSmoke12.png"))
+
+	var clouds = new ParticleSystem(1600, cloud_program,
+		new Texture("particles/whitePuff12.png"))
 
 	# ---
 	# Sound effects
@@ -73,7 +75,7 @@ redef class App
 	fun generate_world: World
 	do
 		var world = new World
-		world.player = new Player(new Point3d[Float](0.0, 20.0, 0.0), 4.0, 4.0,
+		world.player = new Player(new Point3d[Float](0.0, 200.0, 0.0), 4.0, 4.0,
 			new Ak47)
 
 		for i in [0..100] do
@@ -97,6 +99,7 @@ redef class App
 		particle_systems.add explosions
 		particle_systems.add blood
 		particle_systems.add smoke
+		particle_systems.add clouds
 
 		# Setup ground
 		# TODO we may need to move this plane if the player goes far from the center
@@ -118,12 +121,13 @@ redef class App
 		city_sprite.scale = 1.2
 		sprites.add city_sprite
 
+
 		# Trees
 		for i in 1000.times do
 			var s = 0.1 + 0.1.rand
 			var h = tree_texture.height * s
 			var sprite = new Sprite(tree_texture,
-				new Point3d[Float](0.0 & 1000.0, h/2.0 - 10.0*s, -20.0 - 900.0.rand))
+				new Point3d[Float](0.0 & 1500.0, h/2.0 - 10.0*s, -10.0 - 1000.0.rand))
 			sprite.scale = s
 			sprites.add sprite
 
@@ -131,6 +135,25 @@ redef class App
 			var c = 1.0.rand
 			sprite.color = [c, 1.0, c, 1.0]
 		end
+
+		# Clouds
+		var no_clouds_layer = 500.0
+		for i in [0..1000[ do
+			var zp = 1.0.rand
+			var x = 0.0 & 1000.0 * zp
+			var y = no_clouds_layer + (world.boss_altitude - no_clouds_layer*2.0).rand
+			var z = -500.0*zp - 10.0
+
+			var r = 50.0 & 1.0
+			for j in [0..16[ do
+				var a = 2.0*pi.rand
+				var rj = r.rand
+				clouds.add(new Point3d[Float](x+2.0*a.cos*rj, y+a.sin*rj, z & 1.0),
+					48000.0 & 16000.0, 100.0)
+			end
+		end
+
+		world_camera.far = 1100.0
 	end
 
 	redef fun update(dt)
