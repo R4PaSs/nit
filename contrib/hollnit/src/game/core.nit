@@ -284,6 +284,8 @@ abstract class Human
 
 	var ltr = false
 
+	var parachute_deployed: Bool = false
+
 	# Apply a jump from input
 	fun jump
 	do
@@ -292,6 +294,19 @@ abstract class Human
 			# On solid plane, jump
 			inertia.y += 120.0
 			inertia.x = plane.inertia.x + moving * jump_accel
+
+			self.plane = null
+		end
+	end
+
+	# Deploy parachute on input
+	fun parachute
+	do
+		var plane = plane
+		if plane == null and not parachute_deployed then
+			# Deploy parachute
+			parachute_deployed = true
+			inertia.y = -10.0
 
 			self.plane = null
 		end
@@ -342,18 +357,18 @@ abstract class Human
 			inertia.x += moving * freefall_accel * dt
 			inertia.x *= 0.99
 
-			if inertia.y < 0.0 then
-				# Parachute
-				#inertia.y *= 0.9
-			end
-
 			var old_y = bottom
 			super
+			if parachute_deployed then
+				if inertia.y < -10.0 then inertia.y = -10.0
+			end
 
 			# Detect collision with planes
 			for plane in world.planes do # TODO optimize with quad tree
 				if plane.left < right and plane.right > left then
 					if old_y > plane.top and bottom <= plane.top then
+						world.parachute = null
+						parachute_deployed = false
 						# Landed on a plane
 						plane.inertia.y += inertia.y / plane.mass
 
