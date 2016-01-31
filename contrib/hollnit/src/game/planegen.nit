@@ -1,14 +1,9 @@
 import core
 
-redef class Float
-	# Fuzzy value in `[self-variation..self+variation]`
-	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
-end
-
 redef class World
 
 	var max_planes = 10
-	var max_enemies = 10
+	var max_enemies = 5
 
 	redef fun update(dt) do
 		super

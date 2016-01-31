@@ -205,9 +205,9 @@ class Platform
 			var oi = inertia
 			var ninertia: Point3d[Float]
 			if oi.x < 0.0 then
-				ninertia = new Point3d[Float](-20.0, 0.1, 0.0)
+				ninertia = new Point3d[Float](-20.0 & 5.0, 0.1, 0.0)
 			else
-				ninertia = new Point3d[Float](20.0, 0.1, 0.0)
+				ninertia = new Point3d[Float](20.0 & 5.0, 0.1, 0.0)
 			end
 			#print "Changed inertia from {inertia} to {ninertia}"
 			inertia = ninertia
@@ -477,4 +477,9 @@ class Ak47
 	redef var power = 50.0
 
 	redef var bullet_lifespan = 3.0
+end
+
+redef class Float
+	# Fuzzy value in `[self-variation..self+variation]`
+	fun &(variation: Float): Float do return self - variation + 2.0*variation.rand
 end
