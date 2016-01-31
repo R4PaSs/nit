@@ -195,10 +195,10 @@ class Platform
 
 	fun out_of_screen(player: Player, world: World): Bool do
 		var camera = world.camera_view
-		if right < camera.left - 30.0 then return true
-		if left > camera.right + 30.0 then return true
-		if top < camera.bottom - 30.0 then return true
-		if bottom > camera.top + 30.0 then return true
+		if right < camera.left - 20.0 then return true
+		if left > camera.right + 20.0 then return true
+		if top < camera.bottom - 20.0 then return true
+		if bottom > camera.top + 20.0 then return true
 		return false
 	end
 
@@ -207,7 +207,7 @@ class Platform
 		if p == null then return 0.0
 		var px = p.center.x
 		var dst = center.x - px
-		print "Player x position = {px}, distance = {dst}"
+		#print "Player x position = {px}, distance = {dst}"
 		return dst.abs
 	end
 

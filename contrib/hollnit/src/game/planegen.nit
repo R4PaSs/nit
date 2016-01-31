@@ -89,7 +89,7 @@ redef class World
 		if p == null then return
 		for i in planes.reverse_iterator do
 			if i.out_of_screen(p, self) then
-				print "Despawning plane"
+				print "Despawning enemy"
 				i.destroy(self)
 			end
 		end
