@@ -45,6 +45,8 @@ redef class App
 	# Graphics program to display particles slowly drifting upwards
 	var smoke_program = new SmokeProgram
 
+	var cloud_program = new CloudProgram
+
 	# Enabled particle emitters
 	#
 	# To be populated by the client program.
@@ -318,5 +320,16 @@ class SmokeProgram
 			v_color.a = pt / 0.1;
 		else
 			v_color.a = 1.0 - pt*0.9;
+	"""
+end
+
+# Graphics program to display blowing up particles
+class CloudProgram
+	super ParticleProgram
+
+	redef fun vertex_shader_core do return """
+		gl_Position = center * mvp;
+		gl_PointSize = scale / gl_Position.z;
+		v_color.a = 0.75;
 	"""
 end
