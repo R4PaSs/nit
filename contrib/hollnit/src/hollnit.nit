@@ -155,7 +155,8 @@ redef class App
 			sprites.add sprite
 
 			var c = 1.0.rand
-			#sprite.color = [c, 1.0, c, 1.0]
+			c *= 0.7
+			sprite.color = [c, 1.0, c, 1.0]
 		end
 
 		# Clouds
