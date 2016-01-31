@@ -137,7 +137,7 @@ redef class App
 		end
 
 		# Clouds
-		var no_clouds_layer = 500.0
+		var no_clouds_layer = 400.0
 		for i in [0..1000[ do
 			var zp = 1.0.rand
 			var x = 0.0 & 1000.0 * zp
@@ -149,7 +149,7 @@ redef class App
 				var a = 2.0*pi.rand
 				var rj = r.rand
 				clouds.add(new Point3d[Float](x+2.0*a.cos*rj, y+a.sin*rj, z & 1.0),
-					48000.0 & 16000.0, 100.0)
+					48000.0 & 16000.0, inf)
 			end
 		end
 
@@ -298,7 +298,7 @@ redef class Bullet
 	redef var sprite = new Sprite(app.bullet_texture, center) is lazy
 	init do
 		sprite.scale = 0.05
-		sprite.rotation = angle
+		sprite.rotation = -angle
 	end
 end
 
