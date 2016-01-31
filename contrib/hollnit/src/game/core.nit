@@ -272,26 +272,67 @@ abstract class Human
 			inertia.y = 0.0
 		end
 	end
+
+	# Is the weapon ready to shoot yet?
+	fun can_shoot(world: World): Bool
+	do
+		return world.t - weapon.last_shot >= weapon.cooldown
+	end
+
+	fun shoot(angle: Float, world: World) do
+		if not can_shoot(world) then return
+
+		var x_inertia = angle.cos * weapon.power
+		var y_inertia = angle.sin * weapon.power
+		var new_center = new Point3d[Float](self.center.x, self.center.y, self.center.z + 0.1)
+
+		var bullet = register_bullet(new_center, angle, world)
+		bullet.inertia.x = x_inertia
+		bullet.inertia.y = y_inertia
+		weapon.last_shot = world.t
+	end
+
+	protected fun register_bullet(new_center: Point3d[Float], angle: Float, world: World): Bullet
+	do
+		var bullet = new EnemyBullet(new_center, 2.0, 2.0, angle, self.weapon, world.t, world.player.as(not null))
+		world.enemy_bullets.add(bullet)
+		return bullet
+	end
 end
 
 class Player
 	super Human
 
-	fun shoot(angle: Float, world: World) do
-		if world.t - weapon.last_shot < weapon.cooldown then return
-		var x_inertia = angle.cos * weapon.power
-		var y_inertia = angle.sin * weapon.power
-		var new_center = new Point3d[Float](self.center.x, self.center.y, self.center.z + 0.1)
+	redef fun register_bullet(new_center, angle, world)
+	do
 		var bullet = new PlayerBullet(new_center, 2.0, 2.0, angle, self.weapon, world.t,  world.planes, world.enemies)
-		bullet.inertia.x = x_inertia
-		bullet.inertia.y = y_inertia
 		world.player_bullets.add(bullet)
-		weapon.last_shot = world.t
+		return bullet
+	end
+
+	redef fun max_health do return 200.0
+end
+
+abstract class Enemy
+	super Human
+
+	redef fun max_health do return 20.0
+
+	redef fun destroy(world)
+	do
+		super
+		world.enemies.remove self
 	end
 end
 
-class Enemy
-	super Human
+class WalkingEnemy
+	super Enemy
+end
+
+class JetpackEnemy
+	super Enemy
+
+	redef fun affected_by_gravity do return false
 end
 
 class Powerup
@@ -373,7 +414,6 @@ class EnemyBullet
 		world.enemy_bullets.remove(self)
 	end
 end
-
 
 class Ak47
 	super Weapon

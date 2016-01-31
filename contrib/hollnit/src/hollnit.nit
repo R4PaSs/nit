@@ -83,6 +83,10 @@ redef class App
 			world.planes.add new Platform(new Point3d[Float](20.0, i.to_f*16.0 + 16.0, 0.0), 16.0, 4.0)
 		end
 
+		# Enemies
+		world.enemies.add new WalkingEnemy(new Point3d[Float](20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
+		world.enemies.add new JetpackEnemy(new Point3d[Float](-20.0, 200.0, 0.0), 4.0, 4.0, new Ak47)
+
 		# Ground
 		world.planes.add new Platform(new Point3d[Float](0.0, -80.0, 0.0), 200.0, 161.0)
 		return world
@@ -265,7 +269,8 @@ redef class Platform
 end
 
 redef class Enemy
-	redef var sprite = new Sprite(app.enemy_texture, center) is lazy
+	redef var sprite = new Sprite(app.player_textures.rand, center) is lazy
+	init do sprite.scale = width/sprite.texture.width * 2.0
 end
 
 redef class Player
