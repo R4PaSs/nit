@@ -152,6 +152,15 @@ abstract class Body
 		end
 	end
 
+	fun out_of_screen(player: Player, world: World): Bool do
+		var camera = world.camera_view
+		if right < camera.left - 20.0 then return true
+		if left > camera.right + 20.0 then return true
+		if top < camera.bottom - 20.0 then return true
+		if bottom > camera.top + 20.0 then return true
+		return false
+	end
+
 	fun hit(value: Float, world: World)
 	do
 		self.health -= value
@@ -200,15 +209,6 @@ class Platform
 	var old_inertia: nullable Point3d[Float] = null
 
 	var enemy: nullable WalkingEnemy = null is writable
-
-	fun out_of_screen(player: Player, world: World): Bool do
-		var camera = world.camera_view
-		if right < camera.left - 20.0 then return true
-		if left > camera.right + 20.0 then return true
-		if top < camera.bottom - 20.0 then return true
-		if bottom > camera.top + 20.0 then return true
-		return false
-	end
 
 	fun player_dist(world: World): Float do
 		var p = world.player
