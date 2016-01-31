@@ -140,7 +140,7 @@ abstract class Body
 		#TODO if d2 > ? then return
 
 		inertia.x += dx * force / d / mass * 4.0
-		inertia.y += dy * force / d / mass * 16.0
+		inertia.y += dy * force / d / mass * 12.0
 
 		if self isa Player then
 			self.plane = null
