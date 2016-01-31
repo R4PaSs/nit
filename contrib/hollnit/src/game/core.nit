@@ -306,6 +306,14 @@ abstract class Human
 
 	var parachute_deployed: Bool = false
 
+	# Used when in space, x movement
+	var x_moving = 0.0 is writable
+
+	# Used when in space, y movement
+	var y_moving = 0.0 is writable
+
+	redef var affected_by_gravity = true
+
 	# Altitude (in meters)
 	fun altitude: Float do return center.y
 
@@ -339,89 +347,99 @@ abstract class Human
 	do
 		if not is_alive then return
 
-		var on_plane = plane
-		if on_plane != null then
-			# Is it still alive?
-			if not on_plane.is_alive then
-				on_plane = null
-				self.plane = null
-			end
-		end
-
-		if on_plane != null then
-			# On a plane, applying special physics do not call super!
-
-			# Precise movements
-			center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt
-			center.y = on_plane.top + height / 2.0
-			if plane isa Helicopter then
-				center.y = plane.top + height / 2.0 + 1.5
-				var left_blade = plane.center.x - 5.0
-				var right_blade = plane.center.x + 5.0
-				var px = center.x
-				var blade_speed = 0.5
-				if ltr then
-					if px >= right_blade then ltr = false
-					center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt + blade_speed
-				else
-					if px <= left_blade then ltr = true
-					center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt - blade_speed
+		if altitude < world.boss_altitude then
+			var on_plane = plane
+			if on_plane != null then
+				# Is it still alive?
+				if not on_plane.is_alive then
+					on_plane = null
+					self.plane = null
 				end
 			end
 
-			# Detect fall
-			if not (plane.left < right and plane.right > left) then
-				self.plane = null
-			end
-		else
-			# Freefall
+			if on_plane != null then
+				# On a plane, applying special physics do not call super!
 
-			# Only influence the inertia
-			inertia.x += moving * freefall_accel * dt
-			inertia.x *= 0.99
+				# Precise movements
+				center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt
+				center.y = on_plane.top + height / 2.0
+				if plane isa Helicopter then
+					center.y = plane.top + height / 2.0 + 1.5
+					var left_blade = plane.center.x - 5.0
+					var right_blade = plane.center.x + 5.0
+					var px = center.x
+					var blade_speed = 0.5
+					if ltr then
+						if px >= right_blade then ltr = false
+						center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt + blade_speed
+					else
+						if px <= left_blade then ltr = true
+						center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt - blade_speed
+					end
+				end
 
-			var old_y = bottom
-			super
-			if parachute_deployed then
-				if inertia.y < -10.0 then inertia.y = -10.0
-			end
+				# Detect fall
+				if not (plane.left < right and plane.right > left) then
+					self.plane = null
+				end
+			else
+				# Freefall
 
-			# Detect collision with planes
-			for plane in world.planes do # TODO optimize with quad tree
-				if plane.left < right and plane.right > left then
-					if old_y > plane.top and bottom <= plane.top then
-						if world.parachute != null then
-							world.parachute.destroy(world)
-							world.parachute = null
+				# Only influence the inertia
+				inertia.x += moving * freefall_accel * dt
+				inertia.x *= 0.99
+
+				var old_y = bottom
+				super
+				if parachute_deployed then
+					if inertia.y < -10.0 then inertia.y = -10.0
+				end
+
+				# Detect collision with planes
+				for plane in world.planes do # TODO optimize with quad tree
+					if plane.left < right and plane.right > left then
+						if old_y > plane.top and bottom <= plane.top then
+							if world.parachute != null then
+								world.parachute.destroy(world)
+								world.parachute = null
+							end
+							parachute_deployed = false
+							# Landed on a plane
+							plane.inertia.y += inertia.y / plane.mass
+
+							# Update self
+							self.plane = plane
+							inertia.x = 0.0
+							inertia.y = 0.0
+							center.y = plane.top + height / 2.0
+							if plane isa Helicopter then
+								center.y = plane.top + height / 2.0 + 4.0
+							end
+							break
 						end
-						parachute_deployed = false
-						# Landed on a plane
-						plane.inertia.y += inertia.y / plane.mass
-
-						# Update self
-						self.plane = plane
-						inertia.x = 0.0
-						inertia.y = 0.0
-						center.y = plane.top + height / 2.0
-						if plane isa Helicopter then
-							center.y = plane.top + height / 2.0 + 4.0
-						end
-						break
 					end
 				end
 			end
+
+			on_plane = self.plane
+			if on_plane != null then
+				dx_to_plane = center.x - on_plane.center.x
+			end
+
+			if bottom <= 0.0 then
+				die world
+				inertia.x = 0.0
+				inertia.y = 0.0
+			end
+			return
 		end
 
-		on_plane = self.plane
-		if on_plane != null then
-			dx_to_plane = center.x - on_plane.center.x
-		end
+		affected_by_gravity = false
 
-		if bottom <= 0.0 then
-			die world
-			inertia.x = 0.0
-			inertia.y = 0.0
-		end
+		super
+		inertia.x += x_moving * dt
+		inertia.y += y_moving * dt
+		print "Changed player inertia, x = {inertia.x}, y = {inertia.y}"
 	end
 
 	# Is the weapon ready to shoot yet?
