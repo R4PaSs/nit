@@ -28,13 +28,9 @@ redef class App
 
 	var gnd_texture = new Texture("textures/plane.png")
 
-	var plane_textures: Array[Texture] = [
-		new Texture("textures/plane_left.png"),
-		new Texture("textures/plane.png")]
+	var plane_texture = new Texture("textures/plane.png")
 
-	var helicopter_textures: Array[Texture] = [
-		new Texture("textures/helicopter.png"),
-		new Texture("textures/helicopter_right.png")]
+	var helicopter_texture = new Texture("textures/helicopter.png")
 
 	var enemy_texture = new Texture("textures/enemy.png")
 
@@ -271,6 +267,10 @@ redef class App
 					var mod = if event.is_down then 1.0 else -1.0
 					player.moving += mod
 				end
+
+				if player.moving == 0.0 then
+					player.sprite.as(PlayerSprite).stop_running
+				else player.sprite.as(PlayerSprite).start_running
 			end
 
 			if player != null and not player.is_alive then
@@ -299,9 +299,7 @@ end
 
 redef class Platform
 
-	fun textures: Array[Texture] do return app.plane_textures
-
-	redef var sprite = new Sprite(textures.first, center) is lazy
+	redef var sprite = new Sprite(app.plane_texture, center) is lazy
 	init do sprite.scale = width/sprite.texture.width
 
 	redef fun update(dt, world)
@@ -309,15 +307,15 @@ redef class Platform
 		super
 
 		if inertia.x < 0.0 then
-			sprite.texture = textures[0]
+			sprite.invert_x = true
 		else if inertia.x > 0.0 then
-			sprite.texture = textures[1]
+			sprite.invert_x = false
 		end
 	end
 end
 
 redef class Helicopter
-	redef fun textures do return app.helicopter_textures
+	redef var sprite = new Sprite(app.helicopter_texture, center) is lazy
 end
 
 redef class Enemy
@@ -326,8 +324,18 @@ redef class Enemy
 end
 
 redef class Player
-	redef var sprite = new Sprite(app.player_textures.rand, center) is lazy
+	redef var sprite = new PlayerSprite(app.player_textures[1], center, app.player_textures, 0.08) is lazy
 	init do sprite.scale = width/sprite.texture.width * 2.0
+
+	redef fun update(dt, world)
+	do
+		super
+		if moving > 0.0 then
+			sprite.invert_x = false
+		else if moving < 0.0 then
+			sprite.invert_x = true
+		end
+	end
 
 	redef fun die(world)
 	do
@@ -391,21 +399,34 @@ redef class Int
 	end
 end
 
-#class Animation
-	#super Sprite
+class PlayerSprite
+	super Sprite
 
-	#var time_per_frame: Float
+	var running_animation: Array[Texture]
 
-	#private var current_t = 0.0
+	var current_animation: nullable Array[Texture] = null
 
-	#new (frames: Array[Texture], center: Point3d[Float], time_per_frame: Float)
-	#do
-		#init(frames.first, center, frames, time_per_frame)
-	#end
+	private var anim_ot = 0.0
 
-	#var frames: Array[Texture]
+	var time_per_frame: Float
 
-	#redef fun sprite
-	#do
-	#end
-#end
+	fun start_running
+	do
+		anim_ot = app.world.t
+		current_animation = running_animation
+	end
+
+	fun stop_running do current_animation = null
+
+	redef fun texture
+	do
+		var anim = current_animation
+		if anim != null then
+			var dt = app.world.t - anim_ot
+			var i = (dt / time_per_frame).to_i+2
+			return anim.modulo(i)
+		end
+
+		return super
+	end
+end
