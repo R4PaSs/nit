@@ -75,8 +75,16 @@ class World
 
 	fun spawn_player
 	do
-		player = new Player(new Point3d[Float](0.0, 200.0, 0.0), 4.0, 4.0,
-			new Ak47)
+		var old_player = player
+		var pos = null
+		if old_player != null then
+			pos = old_player.center
+			pos.y += 50.0
+		end
+
+		if pos == null then pos = new Point3d[Float](0.0, 200.0, 0.0)
+
+		player = new Player(pos, 4.0, 4.0, new Ak47)
 	end
 end
 

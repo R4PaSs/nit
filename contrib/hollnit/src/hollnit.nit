@@ -242,7 +242,7 @@ redef class App
 			end
 
 			var player = world.player
-			if player != null then
+			if player != null and player.is_alive then
 
 				if (event.name == "space" or event.name == "up") and event.is_down then
 					player.jump
@@ -256,6 +256,12 @@ redef class App
 				if event.name == "right" then
 					var mod = if event.is_down then 1.0 else -1.0
 					player.moving += mod
+				end
+			end
+
+			if player != null and not player.is_alive then
+				if event.name == "space" then
+					world.spawn_player
 				end
 			end
 		end
