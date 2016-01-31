@@ -84,6 +84,9 @@ redef class App
 	private var ui_tutorial_wasd: Texture = texts_sheet.tutorial_wasd
 	private var ui_respawn: Texture = texts_sheet.respawn
 
+	var score_counter = new CounterSprites(texts_sheet.n,
+		new Point3d[Float](32.0, -64.0, 0.0))
+
 	fun generate_world: World
 	do
 		var world = new World
@@ -183,6 +186,8 @@ redef class App
 	do
 		# Game logic
 		world.update dt
+
+		score_counter.value = world.score
 
 		# Update background color
 		var player = world.player
@@ -297,6 +302,21 @@ redef class Body
 	end
 end
 
+redef class Human
+	redef fun die(world)
+	do
+		super
+
+		var force = 4.0
+		health = 0.0
+		for i in 32.times do
+			app.blood.add(
+				new Point3d[Float](center.x & force, center.y & force, center.z & force),
+				(1024.0 & 2048.0) * force, 0.3 & 0.1)
+		end
+	end
+end
+
 redef class Platform
 
 	redef var sprite = new Sprite(app.plane_texture, center) is lazy
@@ -340,14 +360,6 @@ redef class Player
 	redef fun die(world)
 	do
 		super
-
-		var force = 4.0
-		health = 0.0
-		for i in 32.times do
-			app.blood.add(
-				new Point3d[Float](center.x & force, center.y & force, center.z & force),
-				(1024.0 & 2048.0) * force, 0.3 & 0.1)
-		end
 
 		if center.y < 10.0 then
 			# Blood splatter on the ground
@@ -428,5 +440,40 @@ class PlayerSprite
 		end
 
 		return super
+	end
+end
+
+class CounterSprites
+	var textures: Array[Texture]
+
+	private var sprites = new Array[Sprite]
+
+	var anchor: Point3d[Float]
+
+	private var dx: Float is noinit
+	init
+	do
+		var sx = 0.0
+		for t in textures do sx += t.width
+		dx = sx / textures.length.to_f
+	end
+
+	fun value=(value: Int)
+	do
+		for s in sprites do app.ui_sprites.remove s
+		sprites.clear
+
+		var s = value.to_s # TODO manipulate ints directly
+		var x = 0.0
+		for c in s do
+			var i = c.to_i
+			var tex = textures[i]
+
+			x += tex.width/2.0
+			sprites.add new Sprite(tex, new Point3d[Float](anchor.x + x, anchor.y, anchor.z))
+			x += tex.width/2.0
+		end
+
+		app.ui_sprites.add_all sprites
 	end
 end
