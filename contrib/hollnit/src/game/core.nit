@@ -242,6 +242,9 @@ abstract class Human
 	# On which plane? if any
 	var plane: nullable Platform = null
 
+	# Position in relation to `plane`
+	private var dx_to_plane = 0.0
+
 	# Equipped weapon
 	var weapon: Weapon
 
@@ -251,9 +254,9 @@ abstract class Human
 		if plane != null then
 			# On solid plane, jump
 			inertia.y += 80.0
-			plane = null
+			inertia.x = plane.inertia.x + moving * jump_accel
 
-			inertia.x = moving * jump_accel
+			plane = null
 		end
 	end
 
@@ -274,7 +277,7 @@ abstract class Human
 			# On a plane, applying special physics do not call super!
 
 			# Precise movements
-			center.x += moving * walking_speed * dt
+			center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt
 			center.y = on_plane.top + height / 2.0
 
 			# Detect fall
@@ -307,6 +310,11 @@ abstract class Human
 					end
 				end
 			end
+		end
+
+		on_plane = self.plane
+		if on_plane != null then
+			dx_to_plane = center.x - on_plane.center.x
 		end
 
 		if bottom <= 0.0 then
