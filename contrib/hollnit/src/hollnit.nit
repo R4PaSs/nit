@@ -267,31 +267,49 @@ redef class App
 			var player = world.player
 			if player != null and player.is_alive then
 
-				if event.name == "space" and event.is_down and not player.parachute_deployed then
-					player.parachute
-					if player.parachute_deployed then
-						var pc = player.center
-						world.parachute = new Parachute(new Point3d[Float](pc.x, pc.y + 5.0, pc.z), 2.0, 5.0)
+				if player.altitude < world.boss_altitude then
+					if event.name == "space" and event.is_down and not player.parachute_deployed then
+						player.parachute
+						if player.parachute_deployed then
+							var pc = player.center
+							world.parachute = new Parachute(new Point3d[Float](pc.x, pc.y + 5.0, pc.z), 2.0, 5.0)
+						end
+					end
+
+					if (event.name == "space" or event.name == "up") and event.is_down then
+						player.jump
+					end
+
+					if event.name == "left" then
+						var mod = if event.is_down then -1.0 else 1.0
+						player.moving += mod
+					end
+
+					if event.name == "right" then
+						var mod = if event.is_down then 1.0 else -1.0
+						player.moving += mod
+					end
+
+					if player.moving == 0.0 then
+					player.sprite.as(PlayerSprite).stop_running
+					else player.sprite.as(PlayerSprite).start_running
+				else
+					if event.name == "up" and event.is_down then
+						player.y_moving = 50.0
+					end
+
+					if event.name == "down" and event.is_down then
+						player.y_moving = -50.0
+					end
+
+					if event.name == "left" then
+						player.x_moving = -50.0
+					end
+
+					if event.name == "right" then
+						player.x_moving = 50.0
 					end
 				end
-
-				if (event.name == "space" or event.name == "up") and event.is_down then
-					player.jump
-				end
-
-				if event.name == "left" then
-					var mod = if event.is_down then -1.0 else 1.0
-					player.moving += mod
-				end
-
-				if event.name == "right" then
-					var mod = if event.is_down then 1.0 else -1.0
-					player.moving += mod
-				end
-
-				if player.moving == 0.0 then
-					player.sprite.as(PlayerSprite).stop_running
-				else player.sprite.as(PlayerSprite).start_running
 			end
 
 			if player != null and not player.is_alive then
