@@ -91,7 +91,7 @@ redef class World
 		var spawn = 100.rand
 		if spawn < 95 then return
 		if spawned_plane then
-			print "Spawning enemy"
+			print "Spawning walking enemy"
 			var pl = planes.last
 			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.left / 2.0, 0.0)
 			var enemy = new WalkingEnemy(pos, 3.0, 3.0, new Ak47)
@@ -99,7 +99,7 @@ redef class World
 			enemies.add enemy
 			return
 		end
-		print "Spawning enemy"
+		print "Spawning jetpack enemy"
 		var randx = camera_view.top.rand + p.center.x
 		var randy = camera_view.left.rand + p.center.y
 		var pos = new Point3d[Float](randx, randy, 0.0)

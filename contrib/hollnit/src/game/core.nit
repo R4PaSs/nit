@@ -195,10 +195,10 @@ class Platform
 
 	fun out_of_screen(player: Player, world: World): Bool do
 		var camera = world.camera_view
-		if right < camera.left - 10.0 then return true
-		if left > camera.right + 10.0 then return true
-		if top < camera.bottom - 10.0 then return true
-		if bottom > camera.top + 10.0 then return true
+		if right < camera.left - 30.0 then return true
+		if left > camera.right + 30.0 then return true
+		if top < camera.bottom - 30.0 then return true
+		if bottom > camera.top + 30.0 then return true
 		return false
 	end
 
@@ -264,6 +264,8 @@ abstract class Human
 	# Equipped weapon
 	var weapon: Weapon
 
+	var ltr = false
+
 	# Apply a jump from input
 	fun jump
 	do
@@ -296,6 +298,20 @@ abstract class Human
 			# Precise movements
 			center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt
 			center.y = on_plane.top + height / 2.0
+			if plane isa Helicopter then
+				center.y = plane.top + height / 2.0 + 1.5
+				var left_blade = plane.center.x - 5.0
+				var right_blade = plane.center.x + 5.0
+				var px = center.x
+				var blade_speed = 0.5
+				if ltr then
+					if px >= right_blade then ltr = false
+					center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt + blade_speed
+				else
+					if px <= left_blade then ltr = true
+					center.x = on_plane.center.x + dx_to_plane + moving * walking_speed * dt - blade_speed
+				end
+			end
 
 			# Detect fall
 			if not (plane.left < right and plane.right > left) then
@@ -322,7 +338,9 @@ abstract class Human
 						inertia.x = 0.0
 						inertia.y = 0.0
 						center.y = plane.top + height / 2.0
-
+						if plane isa Helicopter then
+							center.y = plane.top + height / 2.0 + 4.0
+						end
 						break
 					end
 				end
