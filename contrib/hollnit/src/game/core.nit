@@ -67,7 +67,6 @@ class World
 		if player != null then lists.add([player])
 
 		for l in lists do
-			print l
 			for body in l do
 				body.apply_force(center, force)
 			end
@@ -123,10 +122,11 @@ abstract class Body
 		var dy = center.y - origin.y
 
 		var d2 = dx*dx + dy*dy
+		var d = d2.sqrt
 		#TODO if d2 > ? then return
 
-		inertia.x += force / dx / mass * 16.0
-		inertia.y += force / dy / mass * 32.0
+		inertia.x += dx * force / d / mass * 4.0
+		inertia.y += dy * force / d / mass * 16.0
 
 		if self isa Player then
 			self.plane = null
@@ -251,12 +251,13 @@ abstract class Human
 	# Apply a jump from input
 	fun jump
 	do
+		var plane = plane
 		if plane != null then
 			# On solid plane, jump
-			inertia.y += 80.0
+			inertia.y += 100.0
 			inertia.x = plane.inertia.x + moving * jump_accel
 
-			plane = null
+			self.plane = null
 		end
 	end
 
