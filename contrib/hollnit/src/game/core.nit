@@ -211,9 +211,17 @@ class Platform
 		return dst.abs
 	end
 
+	# Has this plane slowed down because it is close to the player?
+	private var slowed_down = false
+
 	redef fun update(dt, world) do
 		inertia.y *= 0.95
+
 		super
+
+		# Slow down if close to the player
+		if slowed_down then return
+
 		var dst = player_dist(world)
 		if dst < 20.0 then
 			var oi = inertia
@@ -228,6 +236,7 @@ class Platform
 			#print "Changed inertia from {inertia} to {ninertia}"
 			inertia = ninertia
 			old_inertia = oi
+			slowed_down = true
 		else
 			var oi = old_inertia
 			if oi == null then return
