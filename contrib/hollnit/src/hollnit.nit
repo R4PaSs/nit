@@ -261,7 +261,7 @@ redef class App
 			var player = world.player
 			if player != null and player.is_alive then
 
-				if event.name == "space" and event.is_down then
+				if event.name == "space" and event.is_down and not player.parachute_deployed then
 					player.parachute
 					if player.parachute_deployed then
 						var pc = player.center
