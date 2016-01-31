@@ -87,24 +87,62 @@ redef class World
 	fun spawn_enemy(spawned_plane: Bool) do
 		var p = player
 		if p == null then return
+		for i in planes.reverse_iterator do
+			if i.out_of_screen(p, self) then
+				print "Despawning plane"
+				i.destroy(self)
+			end
+		end
 		if enemies.length >= max_enemies then return
 		var spawn = 100.rand
 		if spawn < 95 then return
 		if spawned_plane then
 			print "Spawning walking enemy"
 			var pl = planes.last
-			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.left / 2.0, 0.0)
+			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.top / 2.0, 0.0)
 			var enemy = new WalkingEnemy(pos, 3.0, 3.0, new Ak47)
 			enemy.inertia = pl.inertia
 			enemies.add enemy
 			return
 		end
 		print "Spawning jetpack enemy"
-		var randx = camera_view.top.rand + p.center.x
-		var randy = camera_view.left.rand + p.center.y
-		var pos = new Point3d[Float](randx, randy, 0.0)
+		# 0: Up
+		# 1: Right
+		# 2: Down
+		# 3: Left
+		var dirspawn = 4.rand
+		var xspawn: Float
+		var yspawn: Float
+		var xinertia: Float
+		var yinertia: Float
+		var cam = camera_view
+		if dirspawn == 0 then
+			xspawn = (cam.right - cam.left).rand
+			yspawn = cam.top + 10.0
+			yinertia = -(10.0.rand)
+			xinertia = 0.0
+		else if dirspawn == 1 then
+			yspawn = (cam.top - cam.bottom).rand
+			xspawn = cam.right + 10.0
+			xinertia = -(10.0.rand)
+			yinertia = 0.0
+		else if dirspawn == 2 then
+			xspawn = (cam.right - cam.left).rand
+			yspawn = cam.bottom - 10.0
+			yinertia = 10.0.rand
+			xinertia = 0.0
+		else if dirspawn == 3 then
+			yspawn = (cam.top - cam.bottom).rand
+			xspawn = cam.left - 10.0
+			xinertia = 10.0.rand
+			yinertia = 0.0
+		else
+			print "Rand failed, should not happen"
+			abort
+		end
+		var pos = new Point3d[Float](xspawn, yspawn, 0.0)
 		var enemy = new JetpackEnemy(pos, 3.0, 3.0, new Ak47)
-		enemy.inertia = new Point3d[Float](10.0.rand, 10.0.rand, 0.0)
+		enemy.inertia = new Point3d[Float](xinertia, yinertia, 0.0)
 		enemies.add enemy
 	end
 end
