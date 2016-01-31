@@ -67,6 +67,9 @@ redef class World
 					yspawn = above_y.rand + 25.0.rand
 				end
 			end
+			if yspawn < 0.0 then
+				yspawn = py + 15.0.rand
+			end
 		end
 		pos = new Point3d[Float](xspawn, yspawn, 0.0 & 0.2)
 		print("Spawning plane at position {pos}")
