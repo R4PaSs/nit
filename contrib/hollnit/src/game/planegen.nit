@@ -12,7 +12,7 @@ redef class World
 
 	redef fun update(dt) do
 		super
-		spawn_plane
+		spawn_enemy(spawn_plane)
 	end
 
 	fun spawn_plane: Bool do
@@ -84,16 +84,16 @@ redef class World
 			print "Spawning enemy"
 			var pl = planes.last
 			var pos = new Point3d[Float](pl.center.x, pl.center.y + pl.left / 2.0, 0.0)
-			#var enemy = new Enemy(pos, 3.0, 3.0, new Ak47)
-			#enemy.inertia = pl.inertia
-			#enemies.add enemy
+			var enemy = new WalkingEnemy(pos, 3.0, 3.0, new Ak47)
+			enemy.inertia = pl.inertia
+			enemies.add enemy
 			return
 		end
 		print "Spawning enemy"
 		var randx = camera_view.top.rand + p.center.x
 		var randy = camera_view.left.rand + p.center.y
 		var pos = new Point3d[Float](randx, randy, 0.0)
-		#var enemy = new Enemy(pos, 0.5, 0.5, new Ak47)
-		#enemies.add enemy
+		var enemy = new JetpackEnemy(pos, 3.0, 3.0, new Ak47)
+		enemies.add enemy
 	end
 end
