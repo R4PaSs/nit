@@ -442,8 +442,12 @@ abstract class Human
 		affected_by_gravity = false
 
 		super
-		inertia.x += x_moving * dt
-		inertia.y += y_moving * dt
+		inertia.x = 0.0
+		inertia.y = 0.0
+
+		center.x += x_moving * dt
+		center.y += y_moving * dt
+
 		print "Changed player inertia, x = {inertia.x}, y = {inertia.y}"
 	end
 
@@ -518,7 +522,15 @@ end
 class Boss
 	super Enemy
 
+	redef fun max_health do return 20000.0
+
 	redef fun affected_by_gravity do return false
+
+	redef fun die(world)
+	do
+		super
+		world.score += 999
+	end
 end
 
 class Powerup

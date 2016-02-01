@@ -408,7 +408,9 @@ end
 
 redef class Helicopter
 	redef var sprite = new Sprite(app.helicopter_texture, center) is lazy
+end
 
+redef class Boss
 	redef var actor is lazy do
 		var actor = new Actor(app.iss_model, center)
 		actor.rotation = pi/2.0
