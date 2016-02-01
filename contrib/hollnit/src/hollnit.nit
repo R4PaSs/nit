@@ -85,8 +85,14 @@ redef class App
 	# UI
 	private var texts_sheet = new TextsImages
 
-	private var ui_tutorial_wasd: Texture = texts_sheet.tutorial_wasd
-	private var ui_respawn: Texture = texts_sheet.respawn
+	private var tutorial_wasd = new Sprite(app.texts_sheet.tutorial_wasd,
+		app.ui_camera.center.offset(0.0, -150.0, 0.0)) is lazy
+
+	private var tutorial_arrows = new Sprite(app.texts_sheet.tutorial_arrows,
+		app.ui_camera.center.offset(0.0, -300.0, 0.0)) is lazy
+
+	private var tutorial_chute = new Sprite(app.texts_sheet.tutorial_chute,
+		app.ui_camera.center.offset(0.0, -450.0, 0.0)) is lazy
 
 	var score_counter = new CounterSprites(texts_sheet.n,
 		new Point3d[Float](32.0, -64.0, 0.0))
@@ -124,8 +130,9 @@ redef class App
 	do
 		super
 
-		show_splash_screen plane_texture
+		show_splash_screen new Texture("textures/splash.jpg")
 
+		# Load 3d models
 		iss_model.load
 
 		# Move the camera to show all the world world in the screen range
@@ -157,7 +164,6 @@ redef class App
 		var city_sprite = new Sprite(city_texture, new Point3d[Float](0.0, 600.0, -999.0))
 		city_sprite.scale = 1.2
 		sprites.add city_sprite
-
 
 		# Trees
 		for i in 1000.times do
@@ -191,6 +197,8 @@ redef class App
 		end
 
 		world_camera.far = 1100.0
+
+		ui_sprites.add_all([tutorial_wasd, tutorial_arrows, tutorial_chute])
 	end
 
 	redef fun update(dt)
@@ -255,9 +263,19 @@ redef class App
 
 			if a != inf and player != null then
 				player.shoot(a, world)
+				hide_tutorial_wasd
 			end
 		end
 	end
+
+	# Remove tutorial sprite about WASD from `ui_sprites`
+	private fun hide_tutorial_wasd do if ui_sprites.has(tutorial_wasd) then ui_sprites.remove(tutorial_wasd)
+
+	# Remove tutorial sprite about arrows from `ui_sprites`
+	private fun hide_tutorial_arrows do if ui_sprites.has(tutorial_arrows) then ui_sprites.remove(tutorial_arrows)
+
+	# Remove tutorial sprite about space from `ui_sprites`
+	private fun hide_tutorial_chute do if ui_sprites.has(tutorial_chute) then ui_sprites.remove(tutorial_chute)
 
 	redef fun accept_event(event)
 	do
@@ -273,13 +291,17 @@ redef class App
 			var player = world.player
 			if player != null and player.is_alive then
 
+				var arrows = once ["left", "right"]
+				if arrows.has(event.name) then hide_tutorial_arrows
+
 				if player.altitude < world.boss_altitude then
-					if event.name == "space" and event.is_down and not player.parachute_deployed then
+					if event.name == "space" and event.is_down and not player.parachute_deployed and player.plane == null then
 						player.parachute
 						if player.parachute_deployed then
 							var pc = player.center
 							world.parachute = new Parachute(new Point3d[Float](pc.x, pc.y + 5.0, pc.z), 2.0, 5.0)
 						end
+						hide_tutorial_chute
 					end
 
 					if (event.name == "space" or event.name == "up") and event.is_down then
@@ -433,7 +455,7 @@ redef class Player
 
 		# Display respawn instructions
 		# TODO explosions and delay
-		app.ui_sprites.add new Sprite(app.ui_respawn, app.ui_camera.center)
+		app.ui_sprites.add new Sprite(app.texts_sheet.respawn, app.ui_camera.center)
 	end
 end
 
