@@ -245,7 +245,7 @@ class POSet[E]
 	#
 	# Nodes are labeled with their `to_s` so homonymous nodes may appear.
 	# Edges are unlabeled.
-	fun write_dot(f: Writer)
+	fun write_dot(f: CharWriter)
 	do
 		f.write "digraph \{\n"
 		var ids = new HashMap[E, Int]

@@ -49,14 +49,14 @@ class PrimitiveNativeFile
 
 	fun io_read(buf: NativeString, len: Int): Int do
 		if file isa FileStream then return file.as(FileStream)._file.io_read(buf, len)
-		var str = file.as(Reader).read(len)
+		var str = file.as(CharReader).read(len)
 		str.to_cstring.copy_to(buf, str.length, 0, 0)
 		return str.length
 	end
 
 	fun io_write(buf: NativeString, from, len: Int): Int do
 		if file isa FileStream then return file.as(FileStream)._file.io_write(buf, from, len)
-		file.as(Writer).write(buf.to_s_with_length(len).substring_from(from))
+		file.as(CharWriter).write(buf.to_s_with_length(len).substring_from(from))
 		return len
 	end
 

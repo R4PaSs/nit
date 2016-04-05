@@ -64,7 +64,7 @@ class CCompilationUnit
 	end
 
 	# Write the core of the header to `stream`
-	fun compile_header_core(stream: Writer)
+	fun compile_header_core(stream: CharWriter)
 	do
 		header_c_base.write_to stream
 		header_custom.write_to stream
@@ -73,7 +73,7 @@ class CCompilationUnit
 	end
 
 	# Write the core of the body to `stream`
-	fun compile_body_core(stream: Writer)
+	fun compile_body_core(stream: CharWriter)
 	do
 		body_decl.write_to stream
 		body_custom.write_to stream

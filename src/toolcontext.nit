@@ -138,7 +138,7 @@ class ToolContext
 	var log_directory: String = "logs"
 
 	# Stream in `log_directory` where all info messages are written
-	var log_info: nullable Writer = null
+	var log_info: nullable CharWriter = null
 
 	# Messages
 	private var messages = new Array[Message]

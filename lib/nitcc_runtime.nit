@@ -277,7 +277,7 @@ end
 # Print a node (using to_s) on a line and recustively each children indented (with two spaces)
 class TreePrinterVisitor
 	super Visitor
-	var writer: Writer
+	var writer: CharWriter
 	private var indent = 0
 	redef fun visit(n)
 	do
@@ -390,7 +390,7 @@ abstract class Node
 		f.close
 	end
 
-	private fun to_dot_visitor(f: Writer, a: Array[NToken])
+	private fun to_dot_visitor(f: CharWriter, a: Array[NToken])
 	do
 		f.write("n{object_id} [label=\"{node_name}\"];\n")
 		for x in children do

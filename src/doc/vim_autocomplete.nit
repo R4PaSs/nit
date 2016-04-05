@@ -63,7 +63,7 @@ redef class MEntity
 	private fun field_separator: String do return "#====#"
 	private fun line_separator: String do return "#nnnn#"
 
-	private fun write_doc(mainmodule: MModule, stream: Writer)
+	private fun write_doc(mainmodule: MModule, stream: CharWriter)
 	do
 		# 1. Short name for autocompletion
 		stream.write complete_name
@@ -94,7 +94,7 @@ redef class MEntity
 		stream.write "\n"
 	end
 
-	private fun write_signature_to_stream(stream: Writer) do end
+	private fun write_signature_to_stream(stream: CharWriter) do end
 
 	# Actual name used in completion
 	private fun complete_name: String do return name
@@ -103,7 +103,7 @@ redef class MEntity
 	private fun complete_mdoc: nullable MDoc do return mdoc
 
 	# Extra auto documentation to append to the `stream`
-	private fun write_extra_doc(mainmodule: MModule, stream: Writer) do end
+	private fun write_extra_doc(mainmodule: MModule, stream: CharWriter) do end
 end
 
 redef class MMethodDef
@@ -336,7 +336,7 @@ redef class MModule
 end
 
 redef class MProperty
-	private fun write_synopsis(mainmodule: MModule, stream: Writer)
+	private fun write_synopsis(mainmodule: MModule, stream: CharWriter)
 	do
 		if visibility == public_visibility then
 			stream.write "+ "

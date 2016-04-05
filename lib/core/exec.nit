@@ -98,13 +98,14 @@ class Process
 		var args = new FlatBuffer
 		var l = 1 # Number of elements in args
 		args.append(command)
-		if arguments != null then
-			for a in arguments do
+		var args_in = arguments
+		if args_in != null then
+			for a in args_in do
 				args.add('\0')
 				#a.output_class_name
 				args.append(a)
 			end
-			l += arguments.length
+			l += args_in.length
 		end
 		data = basic_exec_execute(command.to_cstring, args.to_s.to_cstring, l, pipeflags)
 	end
@@ -211,7 +212,7 @@ end
 # `Process` on which the `stdout` is readable like a `Reader`
 class ProcessReader
 	super Process
-	super Reader
+	super CharReader
 
 	# File Descriptor used for the input.
 	var stream_in: FileReader is noinit
@@ -236,10 +237,10 @@ end
 # `Process` on which `stdin` is writable like a `Writer`
 class ProcessWriter
 	super Process
-	super Writer
+	super CharWriter
 
 	# File Descriptor used for the output.
-	var stream_out: Writer is noinit
+	var stream_out: CharWriter is noinit
 
 	redef fun close do stream_out.close
 
@@ -260,9 +261,9 @@ end
 
 # `Process` on which stdout can be read and stdin can be written to like a `Duplex`
 class ProcessDuplex
-	super ProcessReader
+	super CharDuplex
 	super ProcessWriter
-	super Duplex
+	super ProcessReader
 
 	redef fun close
 	do
@@ -299,7 +300,7 @@ class ProcessDuplex
 			write input.substring(prev, delimiter.after-prev)
 			prev = delimiter.after
 
-			while stream_in.poll_in do
+			while stream_in.ready do
 				read.append stream_in.read_line
 			end
 		end

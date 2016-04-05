@@ -103,7 +103,7 @@ class CsvDocument
 	# * `has_header`: Is the first row the header?
 	# * `skip_empty`: Do we skip the empty lines?
 	# For details, see `CsvReader.skip_empty`.
-	fun load_from(stream: Reader, has_header: Bool, skip_empty: Bool) do
+	fun load_from(stream: CharReader, has_header: Bool, skip_empty: Bool) do
 		var reader = new CsvReader.with_format(stream, format)
 		reader.skip_empty = skip_empty
 		if has_header then
@@ -150,7 +150,7 @@ end
 class CsvWriter
 
 	# The output stream.
-	var ostream: Writer
+	var ostream: CharWriter
 
 	# The format to use.
 	#
@@ -168,7 +168,7 @@ class CsvWriter
 	var always_escape = false is writable
 
 	# Create a new writer with the specified format.
-	init with_format(ostream:Writer, format: CsvFormat) do
+	init with_format(ostream: CharWriter, format: CsvFormat) do
 		init(ostream)
 		self.format = format
 	end
@@ -233,7 +233,7 @@ class CsvReader
 	super Iterator[Array[String]]
 
 	# The input stream.
-	var istream: Reader
+	var istream: CharReader
 
 	# The format to use.
 	#
@@ -259,7 +259,7 @@ class CsvReader
 	private var started = false
 
 	# Create a new reader with the specified format.
-	init with_format(istream:Reader, format: CsvFormat) do
+	init with_format(istream: CharReader, format: CsvFormat) do
 		init(istream)
 		self.format = format
 	end

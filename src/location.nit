@@ -26,7 +26,7 @@ class SourceFile
 	var string: String is noinit
 
 	# The original stream used to initialize `string`
-	var stream: Reader
+	var stream: CharReader
 
 	init
 	do

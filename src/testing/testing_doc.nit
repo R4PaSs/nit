@@ -248,7 +248,7 @@ class NitUnitExecutor
 	# The handled on the file is returned and must be completed and closed.
 	#
 	# `file` should be a valid filepath for a Nit source file.
-	private fun create_unitfile(file: String): Writer
+	private fun create_unitfile(file: String): CharWriter
 	do
 		var dir = file.dirname
 		if dir != "" then dir.mkdir
