@@ -354,6 +354,7 @@ abstract class Text
 	#     assert "1101100".is_bin  == true
 	#     assert "1101020".is_bin  == false
 	fun is_bin: Bool do
+		if is_empty then return false
 		for i in chars do if i != '0' and i != '1' then return false
 		return true
 	end
@@ -363,6 +364,7 @@ abstract class Text
 	#     assert "213453".is_oct  == true
 	#     assert "781".is_oct     == false
 	fun is_oct: Bool do
+		if is_empty then return false
 		for i in chars do if i < '0' or i > '7' then return false
 		return true
 	end
@@ -372,6 +374,7 @@ abstract class Text
 	#     assert "10839".is_dec == true
 	#     assert "164F".is_dec  == false
 	fun is_dec: Bool do
+		if is_empty then return false
 		for i in chars do if i < '0' or i > '9' then return false
 		return true
 	end
