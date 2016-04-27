@@ -443,7 +443,23 @@ abstract class Text
 	#     assert "\na\nb\tc\t".trim          == "a\nb\tc"
 	#
 	# `Char::is_whitespace` determines what is a whitespace.
-	fun trim: SELFTYPE do return (self.l_trim).r_trim
+	fun trim: SELFTYPE do
+		var st_str = -1
+		var ln = length
+		for i in [0 .. ln[ do
+			if not self[i].is_whitespace then
+				st_str = i
+				break
+			end
+		end
+		if st_str == -1 then return empty
+		var end_str = ln - 1
+		while end_str >= 0 do
+			if not self[end_str].is_whitespace then break
+			end_str -= 1
+		end
+		return substring(st_str, end_str - st_str + 1)
+	end
 
 	# Is the string non-empty but only made of whitespaces?
 	#
