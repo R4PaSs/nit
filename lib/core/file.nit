@@ -1028,10 +1028,17 @@ redef class String
 
 	# Return the canonicalized absolute pathname (see POSIX function `realpath`)
 	#
-	# Require: `file_exists`
-	fun realpath: String do
+	#~~~nit
+	# var path = "~/"
+	# # NOTE: C-realpath behaviour, maybe this should be fixed in our
+	# # implementation
+	# assert path.realpath == null
+	# path = "HOME".environ
+	# assert path.realpath != null
+	#~~~
+	fun realpath: nullable String do
 		var cs = to_cstring.file_realpath
-		assert file_exists
+		if cs.address_is_null then return null
 		var res = cs.to_s
 		cs.free
 		return res
